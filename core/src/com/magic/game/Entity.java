@@ -11,21 +11,30 @@ import static com.magic.game.Gladiator.MAX_ENTITY_SPEED;
 public class Entity {
     Sprite sprite;
     Body body;
+    int health;
 
     public Entity (Texture texture, Vector2 pos, Body body) {
         this.sprite = new Sprite(texture);
         this.sprite.setPosition(pos.x, pos.y);
         this.body = body;
+        this.health = 1;
     }
 
     public void update() {
-        if (this.body != null) {
-            this.sprite.setPosition(body.getPosition().x * BOX_TO_WORLD, body.getPosition().y * BOX_TO_WORLD);
+
+        if (this.body != null ) {
+            Vector2 newPos = body.getPosition().cpy().scl(BOX_TO_WORLD);
+            Vector2 offset = new Vector2(sprite.getWidth(), sprite.getHeight()).scl(0.5f);
+            this.sprite.setPosition(newPos.x - offset.x, newPos.y - offset.y);
             Vector2 limitVel = body.getLinearVelocity();
             float speed = limitVel.len();
             if (speed > MAX_ENTITY_SPEED) {
                 body.setLinearVelocity(limitVel.nor().scl(MAX_ENTITY_SPEED));
             }
         }
+    }
+
+    public Vector2 getPos() {
+        return body.getPosition().cpy().scl(BOX_TO_WORLD);
     }
 }
