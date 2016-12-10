@@ -21,26 +21,26 @@ import java.util.List;
 
 public class Gladiator extends ApplicationAdapter {
 
-    public static final float ENTITY_DAMPING = 30.0f;
-    public static final float ENTITY_RADIUS = 12;
-    public static final float ENTITY_DENSITY = 0.2f;
-    public static final float PLAYER_SPEED = 20.0f;
+    public static final float ENTITY_DAMPING = 20.0f;
+    public static final float ENTITY_RADIUS = 6;
+    public static final float ENTITY_DENSITY = 0.4f;
+    public static final float PLAYER_SPEED = 10.0f;
     public static final float BOX_TO_WORLD = 10f;
     public static final float WORLD_TO_BOX = 0.1f;
-    public static final float MAX_ENTITY_SPEED = 10.0f;
+    public static final float MAX_ENTITY_SPEED = 4.0f;
     public static final float ATTACK_COOLDOWN = 0.2f;
 
-    final float VIRTUAL_HEIGHT = 480f;
+    final float VIRTUAL_HEIGHT = 360f;
     OrthographicCamera cam;
     Box2DDebugRenderer debugRenderer;
 	SpriteBatch batch;
     World world;
     float screenWidth, screenHeight;
 
-    boolean showDebug = true;
+    boolean showDebug = false;
     float debugCoolDown;
 
-	Entity player, enemy;
+	Entity player;
 	Texture background, hitboxImage;
 
 	List<Entity> ents;
@@ -48,7 +48,6 @@ public class Gladiator extends ApplicationAdapter {
 
 
     float attackCooldown = 0;
-    boolean isAttacking = false;
     Rectangle hitbox;
     Vector2 hitBoxOffset = new Vector2();
     Vector2 hitBoxSize = new Vector2(20, 20);
@@ -68,19 +67,30 @@ public class Gladiator extends ApplicationAdapter {
 		player = buildEntity(new Texture("player.png"), new Vector2(80, 80));
         player.health = 4;
         ents.add(player);
-        enemy = buildEntity(new Texture("enemy.png"), new Vector2(80, 600));
-        ents.add(enemy);
-        ais.add(new Ai(enemy));
-//        enemy = buildEntity(new Texture("enemy.png"), new Vector2(880, 200));
-//        ents.add(enemy);
-//        ais.add(new Ai(enemy));
-//        enemy = buildEntity(new Texture("enemy.png"), new Vector2(400, 450));
-//        ents.add(enemy);
-        ais.add(new Ai(enemy));
+
+        addWave(2);
 
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
 	}
+
+    private void addWave(int size) {
+        for (int i = 0; i < size; i++) {
+            addEnemy();
+        }
+    }
+
+    private void addEnemy() {
+        Entity ent = buildEntity(new Texture("enemy.png"), getRandomPosition());
+        ents.add(ent);
+        ais.add(new Ai(ent));
+    }
+
+    private Vector2 getRandomPosition() {
+        float xpos = MathUtils.random(0, 480);
+        float ypos = MathUtils.random(0, 360);
+        return new Vector2(xpos, ypos);
+    }
 
     public void resize (int width, int height) {
         screenWidth = VIRTUAL_HEIGHT * width / (float)height;
@@ -161,7 +171,7 @@ public class Gladiator extends ApplicationAdapter {
                 if (ent != player) {
                     if (Intersector.overlaps(getEntityHitBox(ent), hitbox)) {
                         if (ent.takeDamage(1) ) {
-                            Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(100.0f);
+                            Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(20.0f);
                             ent.body.applyForceToCenter(dir, true);
                         }
                     }

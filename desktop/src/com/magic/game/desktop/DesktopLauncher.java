@@ -8,8 +8,8 @@ import com.magic.game.Gladiator;
 	public static void main (String[] arg) {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
         config.fullscreen = false;
-        config.width = 640;
-        config.height = 480;
+        config.width = 1920;
+        config.height = 1200;
 
 		new LwjglApplication(new Gladiator(), config);
 	}

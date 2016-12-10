@@ -13,8 +13,8 @@ public class Ai {
     float attackTimeMax = 0.8f;
     float attackHitStartTime = 0.6f;
     float attackHitEndTime = 0.4f;
-    float weaponSize = 20f;
-    float attackRange = 40f;
+    float weaponSize = 10f;
+    float attackRange = 20f;
     float pickupTimer;
     float maxPickupTime = 1.0f;
 
@@ -81,7 +81,7 @@ public class Ai {
         Rectangle playerBox = new Rectangle(player.getPos().x, player.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
         if (hitBox.overlaps(playerBox)) {
             if (player.takeDamage(1)) {
-                Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((50.0f));
+                Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((10.0f));
                 player.body.applyForceToCenter(dir, true);
             }
         }

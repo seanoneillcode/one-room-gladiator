@@ -14,7 +14,7 @@ public class Entity {
     Body body;
     int health;
     float damageCooldown = 2.0f;
-    float stunTime = 1.0f;
+    float stunTime = 1.4f;
     float damageTimer;
     public State state;
 
