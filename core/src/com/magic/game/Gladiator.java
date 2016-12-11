@@ -4,8 +4,10 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.physics.box2d.joints.DistanceJoint;
@@ -15,9 +17,7 @@ import com.badlogic.gdx.physics.box2d.joints.MotorJointDef;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Gladiator extends ApplicationAdapter {
 
@@ -29,15 +29,16 @@ public class Gladiator extends ApplicationAdapter {
     public static final float WORLD_TO_BOX = 0.1f;
     public static final float MAX_ENTITY_SPEED = 4.0f;
     public static final float ATTACK_COOLDOWN = 0.2f;
+    public static final float ATTACK_FORCE = 40f;
 
-    final float VIRTUAL_HEIGHT = 360f;
+    final float VIRTUAL_HEIGHT = 180f;
     OrthographicCamera cam;
     Box2DDebugRenderer debugRenderer;
 	SpriteBatch batch;
     World world;
     float screenWidth, screenHeight;
 
-    boolean showDebug = false;
+    boolean showDebug = true;
     float debugCoolDown;
 
 	Entity player;
@@ -46,11 +47,11 @@ public class Gladiator extends ApplicationAdapter {
 	List<Entity> ents;
     List<Ai> ais;
 
-
     float attackCooldown = 0;
     Rectangle hitbox;
     Vector2 hitBoxOffset = new Vector2();
     Vector2 hitBoxSize = new Vector2(20, 20);
+    private float elapsedTime = 0;
 
 	@Override
 	public void create () {
@@ -64,11 +65,11 @@ public class Gladiator extends ApplicationAdapter {
 
 		ents = new ArrayList<Entity>();
         ais = new ArrayList<Ai>();
-		player = buildEntity(new Texture("player.png"), new Vector2(80, 80));
+		player = buildEntity(new Vector2(80, 80));
         player.health = 4;
         ents.add(player);
 
-        addWave(2);
+        addWave(5);
 
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
@@ -81,14 +82,14 @@ public class Gladiator extends ApplicationAdapter {
     }
 
     private void addEnemy() {
-        Entity ent = buildEntity(new Texture("enemy.png"), getRandomPosition());
+        Entity ent = buildEntity(getRandomPosition());
         ents.add(ent);
         ais.add(new Ai(ent));
     }
 
     private Vector2 getRandomPosition() {
-        float xpos = MathUtils.random(0, 480);
-        float ypos = MathUtils.random(0, 360);
+        float xpos = MathUtils.random(0, 640);
+        float ypos = MathUtils.random(0, 480);
         return new Vector2(xpos, ypos);
     }
 
@@ -99,7 +100,7 @@ public class Gladiator extends ApplicationAdapter {
         batch.setProjectionMatrix(cam.combined);
     }
 
-	public Entity buildEntity(Texture tex, Vector2 pos) {
+	public Entity buildEntity(Vector2 pos) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
@@ -114,7 +115,7 @@ public class Gladiator extends ApplicationAdapter {
         fixtureDef.friction = 0;
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
-        return new Entity(tex, pos, body);
+        return new Entity(pos, body);
     }
 
 	@Override
@@ -130,11 +131,16 @@ public class Gladiator extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
 		batch.draw(background, 0, 0);
+        Collections.sort(ents, new Comparator<Entity>() {
+            @Override
+            public int compare(Entity o1, Entity o2) {
+                return (int)(o2.getPos().y - o1.getPos().y);
+            }
+        });
 		for (Entity ent : ents) {
-            ent.update();
 			ent.sprite.draw(batch);
 
-            if (showDebug) {
+            if (showDebug && ent.body != null) {
                 Rectangle entHit = getEntityHitBox(ent);
                 batch.draw(hitboxImage, entHit.x, entHit.y, entHit.width, entHit.height);
             }
@@ -143,6 +149,7 @@ public class Gladiator extends ApplicationAdapter {
         if (showDebug && attackCooldown > 0) {
             batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
         }
+        elapsedTime += Gdx.graphics.getDeltaTime();
 
 		batch.end();
         if (showDebug) {
@@ -168,10 +175,10 @@ public class Gladiator extends ApplicationAdapter {
                     player.getPos().y + hitBoxOffset.y,
                     hitBoxSize.x, hitBoxSize.y);
             for (Entity ent : ents) {
-                if (ent != player) {
+                if (ent != player && ent.health > 0) {
                     if (Intersector.overlaps(getEntityHitBox(ent), hitbox)) {
                         if (ent.takeDamage(1) ) {
-                            Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(20.0f);
+                            Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(ATTACK_FORCE);
                             ent.body.applyForceToCenter(dir, true);
                         }
                     }
@@ -180,21 +187,35 @@ public class Gladiator extends ApplicationAdapter {
         }
 
         for (Ai ai : ais) {
-            ai.update(player, this);
+            ai.update(player, this, elapsedTime);
         }
+        player.update(elapsedTime);
 
         // remove dead ents
         Iterator<Entity> entIter = ents.iterator();
         while(entIter.hasNext()) {
             Entity ent = entIter.next();
-            if (ent.health <= 0) {
+            if (ent.health <= 0 && ent.body != null && ent != player) {
                 world.destroyBody(ent.body);
-                entIter.remove();
+                ent.body = null;
             }
         }
     }
 
 	public void handleInput() {
+
+        if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
+        debugCoolDown = debugCoolDown - Gdx.graphics.getDeltaTime();
+        if (debugCoolDown < 0 && Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
+            debugCoolDown = 0.2f;
+            showDebug = !showDebug;
+        }
+        if (player.health < 1) {
+            return;
+        }
+
         boolean leftArrow = Gdx.input.isKeyPressed(Input.Keys.LEFT);
         boolean rightArrow = Gdx.input.isKeyPressed(Input.Keys.RIGHT);
         boolean upArrow = Gdx.input.isKeyPressed(Input.Keys.UP);
@@ -212,20 +233,24 @@ public class Gladiator extends ApplicationAdapter {
         }
         Vector2 playerPos = player.getPos();
         attackCooldown = attackCooldown - delta;
-        if (leftArrow) {
+        player.setIsRunning(leftArrow || rightArrow || upArrow || downArrow);
+        if (leftArrow && !player.isAttacking) {
             player.body.applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
+            player.setIsRight(false);
         }
-        if (rightArrow) {
+        if (rightArrow && !player.isAttacking) {
             player.body.applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
+            player.setIsRight(true);
         }
-        if (upArrow) {
+        if (upArrow && !player.isAttacking) {
             player.body.applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
         }
-        if (downArrow) {
+        if (downArrow && !player.isAttacking) {
             player.body.applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
         }
         if (attackButton) {
             if (attackCooldown < 0) {
+                player.setIsAttacking(true);
                 attackCooldown = ATTACK_COOLDOWN;
                 hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
                 hitBoxSize = new Vector2(20, 20);
@@ -245,15 +270,10 @@ public class Gladiator extends ApplicationAdapter {
                 }
             }
         }
+        if (attackCooldown < 0) {
+            player.setIsAttacking(false);
+        }
 
 
-        if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
-            Gdx.app.exit();
-        }
-        debugCoolDown = debugCoolDown - Gdx.graphics.getDeltaTime();
-        if (debugCoolDown < 0 && Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
-            debugCoolDown = 0.2f;
-            showDebug = !showDebug;
-        }
     }
 }

@@ -24,12 +24,13 @@ public class Ai {
         this.entity = entity;
     }
 
-    public void update(Entity player, Gladiator gladiator) {
-        if (state == State.DEAD) {
+    public void update(Entity player, Gladiator gladiator, float time) {
+        attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
+        if (entity.health <= 0) {
+            state = State.DEAD;
+            entity.update(time);
             return;
         }
-        attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
-
         if (entity.state == Entity.State.STUNNED) {
             state = State.STUNNED;
         } else {
@@ -58,30 +59,32 @@ public class Ai {
         if (state == State.MOVING_PLAYER) {
             Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl(speed);
             entity.body.applyLinearImpulse(dir, entity.getPos(), true);
+            entity.setIsRunning(true);
+            entity.setIsRight(dir.x > 0);
         }
+        entity.setIsAttacking(false);
         if (state == State.ATTACKING) {
+            entity.setIsRunning(false);
             if (attackTimer < 0) {
                 attackTimer = attackTimeMax;
                 Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((weaponSize));
                 hitBox = new Rectangle(entity.getPos().x + dir.x, entity.getPos().y + dir.y, weaponSize, weaponSize);
+                entity.setIsRight(dir.x > 0);
             } else {
                 if (attackTimer > attackHitEndTime && attackTimer < attackHitStartTime) {
                     handleHitting(player);
-                    gladiator.drawRect(hitBox);
+                    entity.setIsAttacking(true);
                 }
             }
         }
-        if (entity.health <= 0) {
-            state = State.DEAD;
-        }
-        entity.update();
+        entity.update(time);
     }
 
     private void handleHitting(Entity player) {
         Rectangle playerBox = new Rectangle(player.getPos().x, player.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
         if (hitBox.overlaps(playerBox)) {
             if (player.takeDamage(1)) {
-                Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((10.0f));
+                Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
                 player.body.applyForceToCenter(dir, true);
             }
         }
