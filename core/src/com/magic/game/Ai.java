@@ -14,7 +14,7 @@ public class Ai {
     float attackHitStartTime = 0.6f;
     float attackHitEndTime = 0.4f;
     float weaponSize = 10f;
-    float attackRange = 20f;
+    float attackRange = 32f;
     float pickupTimer;
     float maxPickupTime = 1.0f;
 
@@ -24,13 +24,14 @@ public class Ai {
         this.entity = entity;
     }
 
-    public void update(Entity player, Gladiator gladiator, float time) {
+    public void update(Entity target, Gladiator gladiator, float time) {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
         if (entity.health <= 0) {
             state = State.DEAD;
             entity.update(time);
             return;
         }
+
         if (entity.state == Entity.State.STUNNED) {
             state = State.STUNNED;
         } else {
@@ -46,46 +47,58 @@ public class Ai {
                         state = State.MOVING_PLAYER;
                     }
                 } else {
-                    if (player.getPos().dst(entity.getPos()) < attackRange) {
-                        state = State.ATTACKING;
+                    if (target == null){
+                        state = State.IDLE;
                     } else {
-                        if (attackTimer < 0) {
-                            state = State.MOVING_PLAYER;
+                        if (target.getPos().dst(entity.getPos()) < attackRange) {
+                            state = State.ATTACKING;
+                        } else {
+                            if (attackTimer < 0) {
+                                state = State.MOVING_PLAYER;
+                            }
                         }
                     }
                 }
             }
         }
+        if (target == null){
+            state = State.IDLE;
+        }
         if (state == State.MOVING_PLAYER) {
-            Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl(speed);
+            Vector2 dir = target.getPos().cpy().sub(entity.getPos()).nor().scl(speed);
             entity.body.applyLinearImpulse(dir, entity.getPos(), true);
             entity.setIsRunning(true);
             entity.setIsRight(dir.x > 0);
         }
-        entity.setIsAttacking(false);
+
         if (state == State.ATTACKING) {
             entity.setIsRunning(false);
             if (attackTimer < 0) {
                 attackTimer = attackTimeMax;
-                Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((weaponSize));
-                hitBox = new Rectangle(entity.getPos().x + dir.x, entity.getPos().y + dir.y, weaponSize, weaponSize);
+                Vector2 dir = target.getPos().cpy().sub(entity.getPos()).nor().scl((weaponSize));
                 entity.setIsRight(dir.x > 0);
             } else {
                 if (attackTimer > attackHitEndTime && attackTimer < attackHitStartTime) {
-                    handleHitting(player);
+                    handleHitting(target);
                     entity.setIsAttacking(true);
+                    gladiator.drawRect(hitBox);
                 }
             }
+        } else {
+            entity.setIsAttacking(false);
         }
+
         entity.update(time);
     }
 
-    private void handleHitting(Entity player) {
-        Rectangle playerBox = new Rectangle(player.getPos().x, player.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
+    private void handleHitting(Entity target) {
+        Rectangle playerBox = new Rectangle(target.getPos().x, target.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
+        Vector2 dir = target.getPos().cpy().sub(entity.getPos()).nor().scl((weaponSize));
+        hitBox = new Rectangle(entity.getPos().x + dir.x, entity.getPos().y + dir.y, weaponSize, weaponSize);
         if (hitBox.overlaps(playerBox)) {
-            if (player.takeDamage(1)) {
-                Vector2 dir = player.getPos().cpy().sub(entity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
-                player.body.applyForceToCenter(dir, true);
+            if (target.takeDamage(1)) {
+                Vector2 force = target.getPos().cpy().sub(entity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
+                target.body.applyForceToCenter(force, true);
             }
         }
     }
@@ -95,6 +108,7 @@ public class Ai {
         ATTACKING,
         DEAD,
         STUNNED,
-        PICKINGUP
+        PICKINGUP,
+        IDLE
     }
 }

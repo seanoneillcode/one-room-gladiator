@@ -28,7 +28,7 @@ public class Gladiator extends ApplicationAdapter {
     public static final float BOX_TO_WORLD = 10f;
     public static final float WORLD_TO_BOX = 0.1f;
     public static final float MAX_ENTITY_SPEED = 4.0f;
-    public static final float ATTACK_COOLDOWN = 0.2f;
+    public static final float ATTACK_COOLDOWN = 0.8f;
     public static final float ATTACK_FORCE = 40f;
 
     final float VIRTUAL_HEIGHT = 180f;
@@ -38,7 +38,7 @@ public class Gladiator extends ApplicationAdapter {
     World world;
     float screenWidth, screenHeight;
 
-    boolean showDebug = true;
+    boolean showDebug = false;
     float debugCoolDown;
 
 	Entity player;
@@ -65,11 +65,17 @@ public class Gladiator extends ApplicationAdapter {
 
 		ents = new ArrayList<Entity>();
         ais = new ArrayList<Ai>();
-		player = buildEntity(new Vector2(80, 80));
+		player = buildEntity(new Vector2(300, 120));
         player.health = 4;
+        player.sprite.setColor(1.0f, 0.1f, 0.1f, 1.0f);
         ents.add(player);
 
-        addWave(5);
+        addWave(1);
+
+        buildWall(new Vector2(12,146), new Vector2(20, 260)); // left
+        buildWall(new Vector2(666,146), new Vector2(20, 260)); // right
+        buildWall(new Vector2(337,10), new Vector2(630, 20)); // bottom
+        buildWall(new Vector2(337,278), new Vector2(630, 20)); // top
 
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
@@ -88,8 +94,8 @@ public class Gladiator extends ApplicationAdapter {
     }
 
     private Vector2 getRandomPosition() {
-        float xpos = MathUtils.random(0, 640);
-        float ypos = MathUtils.random(0, 480);
+        float xpos = MathUtils.random(40, 580);
+        float ypos = MathUtils.random(40, 240);
         return new Vector2(xpos, ypos);
     }
 
@@ -116,6 +122,22 @@ public class Gladiator extends ApplicationAdapter {
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
         return new Entity(pos, body);
+    }
+
+    public void buildWall(Vector2 pos, Vector2 size) {
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.StaticBody;
+        bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
+        Body body = world.createBody(bodyDef);
+        body.setFixedRotation(true);
+        PolygonShape shape = new PolygonShape();
+        shape.setAsBox(size.x * 0.5f * WORLD_TO_BOX, size.y * 0.5f * WORLD_TO_BOX);
+        FixtureDef fixtureDef = new FixtureDef();
+        fixtureDef.shape = shape;
+        fixtureDef.density = 100f;
+        fixtureDef.friction = 0;
+        Fixture fixture = body.createFixture(fixtureDef);
+        shape.dispose();
     }
 
 	@Override
@@ -158,7 +180,9 @@ public class Gladiator extends ApplicationAdapter {
 	}
 
     public void drawRect(Rectangle rect) {
-        batch.draw(hitboxImage, rect.x, rect.y, rect.width, rect.height);
+        if (showDebug) {
+            batch.draw(hitboxImage, rect.x, rect.y, rect.width, rect.height);
+        }
     }
 
 	public static Rectangle getEntityHitBox(Entity ent) {
@@ -169,7 +193,7 @@ public class Gladiator extends ApplicationAdapter {
 	public void handleUpdate() {
 
         // player hit
-        if (attackCooldown > 0) {
+        if (attackCooldown > (ATTACK_COOLDOWN / 2.0f)) {
             hitbox = new Rectangle(
                     player.getPos().x + hitBoxOffset.x,
                     player.getPos().y + hitBoxOffset.y,
@@ -184,10 +208,12 @@ public class Gladiator extends ApplicationAdapter {
                     }
                 }
             }
+        } else {
+            player.setIsAttacking(false);
         }
 
         for (Ai ai : ais) {
-            ai.update(player, this, elapsedTime);
+            ai.update(getNearestEntity(ai.entity), this, elapsedTime);
         }
         player.update(elapsedTime);
 
@@ -200,6 +226,22 @@ public class Gladiator extends ApplicationAdapter {
                 ent.body = null;
             }
         }
+    }
+
+    public Entity getNearestEntity(Entity self) {
+        float dist = 0;
+        Entity found = null;
+        for (Entity other : ents) {
+            if (other == self || other.health < 1) {
+                continue;
+            }
+            float thisDist = other.getPos().dst2(self.getPos());
+            if (thisDist < dist || found == null) {
+                found = other;
+                dist = thisDist;
+            }
+        }
+        return found;
     }
 
 	public void handleInput() {
@@ -253,7 +295,7 @@ public class Gladiator extends ApplicationAdapter {
                 player.setIsAttacking(true);
                 attackCooldown = ATTACK_COOLDOWN;
                 hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
-                hitBoxSize = new Vector2(20, 20);
+                hitBoxSize = new Vector2(10, 10);
                 Vector2 hitBoxSizeHalf = hitBoxSize.cpy().scl(0.5f);
                 float doubleRadius = 2 * ENTITY_RADIUS;
                 if (hitDown) {
@@ -270,10 +312,6 @@ public class Gladiator extends ApplicationAdapter {
                 }
             }
         }
-        if (attackCooldown < 0) {
-            player.setIsAttacking(false);
-        }
-
 
     }
 }

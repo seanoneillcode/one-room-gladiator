@@ -5,8 +5,10 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
+import javafx.scene.paint.Color;
 
 import java.util.List;
 
@@ -28,7 +30,7 @@ public class Entity {
     int imageHeight = 44;
     float slowCooldown = 0.6f;
     float slowTimer;
-    float dieTimer;
+    float dieTimer, attTimer;
     public boolean isAttacking;
     Vector2 lastPos;
 
@@ -37,6 +39,9 @@ public class Entity {
         this.sprite = new Sprite();
         sprite.setSize(imageWidth, imageHeight);
         sprite.setOrigin(imageWidth / 2, imageHeight);
+        Color color = Color.hsb(MathUtils.random(360.0f), MathUtils.random(0.8f, 1.0f), MathUtils.random(0.2f, 1.0f));
+
+        sprite.setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
 
         TextureRegion[][] idleRegions = TextureRegion.split(new Texture("player-idle.png"), imageWidth, imageHeight);
         idle = new Animation(1/2f, idleRegions[0]);
@@ -60,11 +65,15 @@ public class Entity {
         isRunning = false;
         isAttacking = false;
         dieTimer = 0;
+        attTimer = 0;
         lastPos = pos.cpy();
     }
 
     public void setIsAttacking(boolean isAttacking) {
         this.isAttacking = isAttacking;
+        if (!isAttacking) {
+            attTimer = 0;
+        }
     }
 
     public void setIsRight(boolean isRight) {
@@ -86,6 +95,9 @@ public class Entity {
         }
         if (animState == AnimState.ATT) {
             choice = att;
+            loop = false;
+            actualTime = attTimer;
+            attTimer = attTimer + Gdx.graphics.getDeltaTime();
         }
         if (animState == AnimState.DIE) {
             choice = die;
