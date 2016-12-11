@@ -1,6 +1,7 @@
 package com.magic.game;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -34,6 +35,7 @@ public class Entity {
     public boolean isAttacking;
     Vector2 lastPos;
     Texture shadow;
+    Sound thumpSound;
 
     public Entity (Vector2 pos, Body body) {
         animState = AnimState.IDLE;
@@ -58,6 +60,8 @@ public class Entity {
         TextureRegion[][] attRegions = TextureRegion.split(new Texture("player-attack.png"), imageWidth, imageHeight);
         att = new Animation(1/30f, attRegions[0]);
         setAnimation(0);
+
+        thumpSound = Gdx.audio.newSound(Gdx.files.internal("thump-sound.wav"));
 
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
         this.sprite.setPosition(loc.x, loc.y);
@@ -172,10 +176,10 @@ public class Entity {
 
     public boolean takeDamage(int amount) {
         if (damageTimer < 0) {
+            thumpSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0);
             state = State.STUNNED;
             health = health - amount;
             damageTimer = damageCooldown;
-            System.out.println("entity takes damage, health = " + health);
             return true;
         }
         return false;

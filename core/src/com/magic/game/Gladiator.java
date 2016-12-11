@@ -3,6 +3,7 @@ package com.magic.game;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -48,6 +49,8 @@ public class Gladiator extends ApplicationAdapter {
     private float elapsedTime = 0;
     MetaGame metaGame;
 
+    Sound bassMusic, loseSound, sliceSound, trebleMusic;
+
 	@Override
 	public void create () {
         world = new World(new Vector2(), false);
@@ -67,6 +70,13 @@ public class Gladiator extends ApplicationAdapter {
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
 
+        sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
+        loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound.wav"));
+        bassMusic = Gdx.audio.newSound(Gdx.files.internal("bass-music7.wav"));
+        trebleMusic = Gdx.audio.newSound(Gdx.files.internal("treble-music.wav"));
+        bassMusic.loop(0.2f);
+        trebleMusic.loop(0.1f);
+
         resetGame();
 	}
 
@@ -79,7 +89,7 @@ public class Gladiator extends ApplicationAdapter {
         ents.add(player);
         elapsedTime = 0;
         attackCooldown = 0;
-        addWave(1);
+        addWave(20);
     }
 
     private void addWave(int size) {
@@ -186,6 +196,10 @@ public class Gladiator extends ApplicationAdapter {
             }
 		}
         if (!metaGame.isPaused()) {
+            if (player.health < 1) {
+                loseSound.play();
+                metaGame.gameState = MetaGame.GameState.LOSE;
+            }
             handleUpdate();
             if (showDebug && attackCooldown > 0) {
                 batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
@@ -194,6 +208,7 @@ public class Gladiator extends ApplicationAdapter {
         }
 
 		batch.end();
+
         if (metaGame.gameState == MetaGame.GameState.COUNTDOWN || metaGame.isSelectScreen()) {
             cam.position.set(player.getPos().x, player.getPos().y, 0);
             cam.update();
@@ -250,6 +265,7 @@ public class Gladiator extends ApplicationAdapter {
             metaGame.gameState = MetaGame.GameState.WIN;
         }
         player.update(elapsedTime);
+
 
         // remove dead ents
         Iterator<Entity> entIter = ents.iterator();
@@ -326,6 +342,7 @@ public class Gladiator extends ApplicationAdapter {
         }
         if (attackButton) {
             if (attackCooldown < 0) {
+                sliceSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0 );
                 player.setIsAttacking(true);
                 attackCooldown = ATTACK_COOLDOWN;
                 hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);

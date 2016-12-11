@@ -95,13 +95,9 @@ public class MetaGame {
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
         }
-        boolean hitLeft = Gdx.input.isKeyPressed(Input.Keys.A);
-        boolean hitRight = Gdx.input.isKeyPressed(Input.Keys.D);
-        boolean hitUp = Gdx.input.isKeyPressed(Input.Keys.W);
-        boolean hitDown = Gdx.input.isKeyPressed(Input.Keys.S);
         boolean space = Gdx.input.isKeyPressed(Input.Keys.SPACE);
         boolean enter = Gdx.input.isKeyPressed(Input.Keys.ENTER);
-        boolean anyKey = hitDown || hitLeft || hitRight || hitUp || space || enter;
+        boolean anyKey = space || enter;
         if (buttonTimer < 0 && anyKey) {
             buttonTimer = buttonCooldown;
             if (gameState == GameState.CONTROLS) {
