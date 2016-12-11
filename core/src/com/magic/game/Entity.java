@@ -33,6 +33,7 @@ public class Entity {
     float dieTimer, attTimer;
     public boolean isAttacking;
     Vector2 lastPos;
+    Texture shadow;
 
     public Entity (Vector2 pos, Body body) {
         animState = AnimState.IDLE;
@@ -43,6 +44,7 @@ public class Entity {
 
         sprite.setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
 
+        shadow = new Texture("player-shadow.png");
         TextureRegion[][] idleRegions = TextureRegion.split(new Texture("player-idle.png"), imageWidth, imageHeight);
         idle = new Animation(1/2f, idleRegions[0]);
         TextureRegion[][] runRegions = TextureRegion.split(new Texture("player-run.png"), imageWidth, imageHeight);
@@ -57,7 +59,8 @@ public class Entity {
         att = new Animation(1/30f, attRegions[0]);
         setAnimation(0);
 
-        this.sprite.setPosition(pos.x, pos.y);
+        Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
+        this.sprite.setPosition(loc.x, loc.y);
         this.body = body;
         this.health = 2;
         state = State.NORMAL;

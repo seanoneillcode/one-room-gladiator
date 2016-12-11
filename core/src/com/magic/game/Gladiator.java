@@ -10,12 +10,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.physics.box2d.joints.DistanceJoint;
-import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
-import com.badlogic.gdx.physics.box2d.joints.MotorJoint;
-import com.badlogic.gdx.physics.box2d.joints.MotorJointDef;
-import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
-import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 import java.util.*;
 
@@ -52,6 +46,7 @@ public class Gladiator extends ApplicationAdapter {
     Vector2 hitBoxOffset = new Vector2();
     Vector2 hitBoxSize = new Vector2(20, 20);
     private float elapsedTime = 0;
+    MetaGame metaGame;
 
 	@Override
 	public void create () {
@@ -59,18 +54,10 @@ public class Gladiator extends ApplicationAdapter {
         cam = new OrthographicCamera();
         debugRenderer = new Box2DDebugRenderer();
 		batch = new SpriteBatch();
+        metaGame = new MetaGame();
 
 		background = new Texture("background.png");
         hitboxImage = new Texture("hitbox.png");
-
-		ents = new ArrayList<Entity>();
-        ais = new ArrayList<Ai>();
-		player = buildEntity(new Vector2(300, 120));
-        player.health = 4;
-        player.sprite.setColor(1.0f, 0.1f, 0.1f, 1.0f);
-        ents.add(player);
-
-        addWave(1);
 
         buildWall(new Vector2(12,146), new Vector2(20, 260)); // left
         buildWall(new Vector2(666,146), new Vector2(20, 260)); // right
@@ -79,7 +66,21 @@ public class Gladiator extends ApplicationAdapter {
 
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
+
+        resetGame();
 	}
+
+    public void resetGame() {
+        ents = new ArrayList<Entity>();
+        ais = new ArrayList<Ai>();
+        player = buildEntity(new Vector2(300, 120));
+        player.health = 4;
+        player.sprite.setColor(1.0f, 0.1f, 0.1f, 1.0f);
+        ents.add(player);
+        elapsedTime = 0;
+        attackCooldown = 0;
+        addWave(1);
+    }
 
     private void addWave(int size) {
         for (int i = 0; i < size; i++) {
@@ -140,14 +141,29 @@ public class Gladiator extends ApplicationAdapter {
         shape.dispose();
     }
 
+
+
 	@Override
 	public void render () {
-        handleInput();
-
-        world.step(Gdx.graphics.getDeltaTime(), 6, 2);
-        cam.position.set(player.sprite.getX(), player.sprite.getY(), 0);
-        cam.update();
-        batch.setProjectionMatrix(cam.combined);
+        if (metaGame.gameState == MetaGame.GameState.PLAYAGAIN) {
+            resetGame();
+            metaGame.playAgain();
+        }
+        if (!metaGame.isRenderingGame()) {
+            world.step(Gdx.graphics.getDeltaTime(), 6, 2);
+            cam.position.set(player.getPos().x, player.getPos().y, 0);
+            cam.update();
+            batch.setProjectionMatrix(cam.combined);
+            metaGame.render(batch, player.getPos().sub(screenWidth * 0.5f, screenHeight * 0.5f));
+            return;
+        }
+        if (!metaGame.isPaused()) {
+            handleInput();
+            world.step(Gdx.graphics.getDeltaTime(), 6, 2);
+            cam.position.set(player.getPos().x, player.getPos().y, 0);
+            cam.update();
+            batch.setProjectionMatrix(cam.combined);
+        }
 
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -161,19 +177,30 @@ public class Gladiator extends ApplicationAdapter {
         });
 		for (Entity ent : ents) {
 			ent.sprite.draw(batch);
-
+            if (ent.health > 0) {
+                batch.draw(ent.shadow, ent.sprite.getX(), ent.sprite.getY());
+            }
             if (showDebug && ent.body != null) {
                 Rectangle entHit = getEntityHitBox(ent);
                 batch.draw(hitboxImage, entHit.x, entHit.y, entHit.width, entHit.height);
             }
 		}
-        handleUpdate();
-        if (showDebug && attackCooldown > 0) {
-            batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
+        if (!metaGame.isPaused()) {
+            handleUpdate();
+            if (showDebug && attackCooldown > 0) {
+                batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
+            }
+            elapsedTime += Gdx.graphics.getDeltaTime();
         }
-        elapsedTime += Gdx.graphics.getDeltaTime();
 
 		batch.end();
+        if (metaGame.gameState == MetaGame.GameState.COUNTDOWN || metaGame.isSelectScreen()) {
+            cam.position.set(player.getPos().x, player.getPos().y, 0);
+            cam.update();
+            batch.setProjectionMatrix(cam.combined);
+            metaGame.render(batch, player.getPos().sub(screenWidth * 0.5f, screenHeight * 0.5f));
+        }
+
         if (showDebug) {
             debugRenderer.render(world, cam.combined.cpy().scl(BOX_TO_WORLD));
         }
@@ -212,8 +239,15 @@ public class Gladiator extends ApplicationAdapter {
             player.setIsAttacking(false);
         }
 
+        boolean aliveAi = false;
         for (Ai ai : ais) {
             ai.update(getNearestEntity(ai.entity), this, elapsedTime);
+            if (ai.state != Ai.State.DEAD) {
+                aliveAi = true;
+            }
+        }
+        if (!aliveAi) {
+            metaGame.gameState = MetaGame.GameState.WIN;
         }
         player.update(elapsedTime);
 
