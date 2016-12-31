@@ -7,7 +7,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class Ai {
-    Entity entity;
+    PlayerEntityImpl playerEntity;
     float speed = Gladiator.PLAYER_SPEED;
 
     State state = State.MOVING_PLAYER;
@@ -24,8 +24,8 @@ public class Ai {
     Sound sliceSound, screamSound;
     boolean sliceSoundPlaying;
 
-    public Ai(Entity entity) {
-        this.entity = entity;
+    public Ai(PlayerEntityImpl playerEntity) {
+        this.playerEntity = playerEntity;
         sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
         screamSound = Gdx.audio.newSound(Gdx.files.internal("scream-sound.wav"));
         sliceSoundPlaying = false;
@@ -33,20 +33,20 @@ public class Ai {
 
     public void update(Entity target, Gladiator gladiator, float time) {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
-        if (entity.health <= 0) {
+        if (playerEntity.health <= 0) {
             if (state != State.DEAD) {
                 screamSound.play(0.9f, MathUtils.random(0.5f, 2.0f), 0);
             }
             state = State.DEAD;
-            entity.update(time);
+            playerEntity.update(time);
             return;
         }
 
-        if (entity.state == Entity.State.STUNNED) {
+        if (playerEntity.state == PlayerEntityImpl.State.STUNNED) {
             state = State.STUNNED;
         } else {
             if (state == State.STUNNED) {
-                if (entity.state == Entity.State.NORMAL) {
+                if (playerEntity.state == PlayerEntityImpl.State.NORMAL) {
                     state = State.PICKINGUP;
                     pickupTimer = maxPickupTime;
                 }
@@ -60,7 +60,7 @@ public class Ai {
                     if (target == null){
                         state = State.IDLE;
                     } else {
-                        if (target.getPos().dst(entity.getPos()) < attackRange) {
+                        if (target instanceof PlayerEntityImpl && target.getPos().dst(playerEntity.getPos()) < attackRange) {
                             state = State.ATTACKING;
                         } else {
                             if (attackTimer < 0) {
@@ -75,31 +75,31 @@ public class Ai {
             state = State.IDLE;
         }
         if (state == State.MOVING_PLAYER) {
-            Vector2 dir = target.getPos().cpy().sub(entity.getPos()).nor().scl(speed);
-            entity.body.applyLinearImpulse(dir, entity.getPos(), true);
-            entity.setIsRunning(true);
-            entity.setIsRight(dir.x > 0);
+            Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl(speed);
+            playerEntity.body.applyLinearImpulse(dir, playerEntity.getPos(), true);
+            playerEntity.setIsRunning(true);
+            playerEntity.setIsRight(dir.x > 0);
         }
 
         if (state == State.ATTACKING) {
-            entity.setIsRunning(false);
+            playerEntity.setIsRunning(false);
             if (attackTimer < 0) {
                 attackTimer = attackTimeMax;
-                Vector2 dir = target.getPos().cpy().sub(entity.getPos()).nor().scl((weaponSize));
-                entity.setIsRight(dir.x > 0);
+                Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
+                playerEntity.setIsRight(dir.x > 0);
             } else {
                 if (attackTimer > attackHitEndTime && attackTimer < attackHitStartTime) {
                     handleHitting(target);
-                    entity.setIsAttacking(true);
+                    playerEntity.setIsAttacking(true);
                     gladiator.drawRect(hitBox);
                 }
             }
         } else {
-            entity.setIsAttacking(false);
+            playerEntity.setIsAttacking(false);
             sliceSoundPlaying = false;
         }
 
-        entity.update(time);
+        playerEntity.update(time);
     }
 
     private void handleHitting(Entity target) {
@@ -108,12 +108,12 @@ public class Ai {
             sliceSoundPlaying = true;
         }
         Rectangle playerBox = new Rectangle(target.getPos().x, target.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
-        Vector2 dir = target.getPos().cpy().sub(entity.getPos()).nor().scl((weaponSize));
-        hitBox = new Rectangle(entity.getPos().x + dir.x, entity.getPos().y + dir.y, weaponSize, weaponSize);
+        Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
+        hitBox = new Rectangle(playerEntity.getPos().x + dir.x, playerEntity.getPos().y + dir.y, weaponSize, weaponSize);
         if (hitBox.overlaps(playerBox)) {
             if (target.takeDamage(1)) {
-                Vector2 force = target.getPos().cpy().sub(entity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
-                target.body.applyForceToCenter(force, true);
+                Vector2 force = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
+                target.getBody().applyForceToCenter(force, true);
             }
         }
     }

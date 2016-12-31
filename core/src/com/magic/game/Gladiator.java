@@ -5,10 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
 
@@ -25,6 +22,7 @@ public class Gladiator extends ApplicationAdapter {
     public static final float MAX_ENTITY_SPEED = 4.0f;
     public static final float ATTACK_COOLDOWN = 0.8f;
     public static final float ATTACK_FORCE = 40f;
+    public static final float PICKUP_RADIUS = 3f;
 
     final float VIRTUAL_HEIGHT = 180f;
     OrthographicCamera cam;
@@ -36,11 +34,12 @@ public class Gladiator extends ApplicationAdapter {
     boolean showDebug = false;
     float debugCoolDown;
 
-	Entity player;
+	PlayerEntityImpl player;
 	Texture background, hitboxImage;
 
 	List<Entity> ents;
     List<Ai> ais;
+    List<Entity> pickups;
 
     float attackCooldown = 0;
     Rectangle hitbox;
@@ -54,10 +53,12 @@ public class Gladiator extends ApplicationAdapter {
 	@Override
 	public void create () {
         world = new World(new Vector2(), false);
+        world.setContactListener(new CollisionListener());
         cam = new OrthographicCamera();
         debugRenderer = new Box2DDebugRenderer();
 		batch = new SpriteBatch();
         metaGame = new MetaGame();
+
 
 		background = new Texture("background.png");
         hitboxImage = new Texture("hitbox.png");
@@ -72,24 +73,33 @@ public class Gladiator extends ApplicationAdapter {
 
         sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
         loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound.wav"));
-        bassMusic = Gdx.audio.newSound(Gdx.files.internal("bass-music7.wav"));
-        trebleMusic = Gdx.audio.newSound(Gdx.files.internal("treble-music.wav"));
-        bassMusic.loop(0.2f);
-        trebleMusic.loop(0.1f);
+        //bassMusic = Gdx.audio.newSound(Gdx.files.internal("bass-music7.wav"));
+        //trebleMusic = Gdx.audio.newSound(Gdx.files.internal("treble-music.wav"));
+        //bassMusic.loop(0.2f);
+        //trebleMusic.loop(0.1f);
 
         resetGame();
 	}
 
     public void resetGame() {
+        if (ents != null) {
+            for (Entity ent : ents) {
+                if (ent.getBody() != null) {
+                    world.destroyBody(ent.getBody());
+                    ent.destroyBody();
+                }
+            }
+        }
         ents = new ArrayList<Entity>();
         ais = new ArrayList<Ai>();
-        player = buildEntity(new Vector2(300, 120));
-        player.health = 4;
-        player.sprite.setColor(1.0f, 0.1f, 0.1f, 1.0f);
+        pickups = new ArrayList<Entity>();
+        player = PlayerEntity(new Vector2(300, 120));
+        player.setHealth(4);
+        player.getSprite().setColor(1.0f, 0.1f, 0.1f, 1.0f);
         ents.add(player);
         elapsedTime = 0;
         attackCooldown = 0;
-        addWave(20);
+        addWave(5);
     }
 
     private void addWave(int size) {
@@ -99,7 +109,7 @@ public class Gladiator extends ApplicationAdapter {
     }
 
     private void addEnemy() {
-        Entity ent = buildEntity(getRandomPosition());
+        PlayerEntityImpl ent = PlayerEntity(getRandomPosition());
         ents.add(ent);
         ais.add(new Ai(ent));
     }
@@ -117,7 +127,7 @@ public class Gladiator extends ApplicationAdapter {
         batch.setProjectionMatrix(cam.combined);
     }
 
-	public Entity buildEntity(Vector2 pos) {
+	public PlayerEntityImpl PlayerEntity(Vector2 pos) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
@@ -132,7 +142,25 @@ public class Gladiator extends ApplicationAdapter {
         fixtureDef.friction = 0;
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
-        return new Entity(pos, body);
+        return new PlayerEntityImpl(pos, body);
+    }
+
+    public Entity buildPickup(Vector2 pos) {
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.DynamicBody;
+        bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
+        Body body = world.createBody(bodyDef);
+        body.setFixedRotation(true);
+        body.setLinearDamping(ENTITY_DAMPING * WORLD_TO_BOX);
+        CircleShape shape = new CircleShape();
+        shape.setRadius(PICKUP_RADIUS * WORLD_TO_BOX);
+        FixtureDef fixtureDef = new FixtureDef();
+        fixtureDef.shape = shape;
+        fixtureDef.density = ENTITY_DENSITY * WORLD_TO_BOX;
+        fixtureDef.friction = 0;
+        Fixture fixture = body.createFixture(fixtureDef);
+        shape.dispose();
+        return new PickupEntity(pos, body);
     }
 
     public void buildWall(Vector2 pos, Vector2 size) {
@@ -150,8 +178,6 @@ public class Gladiator extends ApplicationAdapter {
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
     }
-
-
 
 	@Override
 	public void render () {
@@ -186,17 +212,17 @@ public class Gladiator extends ApplicationAdapter {
             }
         });
 		for (Entity ent : ents) {
-			ent.sprite.draw(batch);
-            if (ent.health > 0) {
-                batch.draw(ent.shadow, ent.sprite.getX(), ent.sprite.getY());
+			ent.getSprite().draw(batch);
+            if (ent.getHealth() > 0) {
+                ent.draw(batch);
             }
-            if (showDebug && ent.body != null) {
+            if (showDebug && ent.getBody() != null) {
                 Rectangle entHit = getEntityHitBox(ent);
                 batch.draw(hitboxImage, entHit.x, entHit.y, entHit.width, entHit.height);
             }
 		}
         if (!metaGame.isPaused()) {
-            if (player.health < 1) {
+            if (player.getHealth() < 1) {
                 loseSound.play();
                 metaGame.gameState = MetaGame.GameState.LOSE;
             }
@@ -204,6 +230,7 @@ public class Gladiator extends ApplicationAdapter {
             if (showDebug && attackCooldown > 0) {
                 batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
             }
+
             elapsedTime += Gdx.graphics.getDeltaTime();
         }
 
@@ -241,11 +268,11 @@ public class Gladiator extends ApplicationAdapter {
                     player.getPos().y + hitBoxOffset.y,
                     hitBoxSize.x, hitBoxSize.y);
             for (Entity ent : ents) {
-                if (ent != player && ent.health > 0) {
+                if (ent != player && ent.getHealth() > 0) {
                     if (Intersector.overlaps(getEntityHitBox(ent), hitbox)) {
                         if (ent.takeDamage(1) ) {
                             Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(ATTACK_FORCE);
-                            ent.body.applyForceToCenter(dir, true);
+                            ent.getBody().applyForceToCenter(dir, true);
                         }
                     }
                 }
@@ -256,7 +283,7 @@ public class Gladiator extends ApplicationAdapter {
 
         boolean aliveAi = false;
         for (Ai ai : ais) {
-            ai.update(getNearestEntity(ai.entity), this, elapsedTime);
+            ai.update(getNearestEntity(ai.playerEntity), this, elapsedTime);
             if (ai.state != Ai.State.DEAD) {
                 aliveAi = true;
             }
@@ -266,23 +293,38 @@ public class Gladiator extends ApplicationAdapter {
         }
         player.update(elapsedTime);
 
+        for (Entity ent : pickups) {
+            ent.update(elapsedTime);
+        }
 
+        List<Entity> newEnts = new ArrayList<Entity>();
         // remove dead ents
         Iterator<Entity> entIter = ents.iterator();
         while(entIter.hasNext()) {
             Entity ent = entIter.next();
-            if (ent.health <= 0 && ent.body != null && ent != player) {
-                world.destroyBody(ent.body);
-                ent.body = null;
+            if (ent.getHealth() <= 0 && ent.getBody() != null && ent != player) {
+                if (!(ent instanceof PickupEntity)) {
+                    Entity newEnt = buildPickup(ent.getPos());
+                    newEnts.add(newEnt);
+                    pickups.add(newEnt);
+                    world.destroyBody(ent.getBody());
+                    ent.destroyBody();
+                } else {
+                    world.destroyBody(ent.getBody());
+                    ent.destroyBody();
+                    entIter.remove();
+                }
+
             }
         }
+        ents.addAll(newEnts);
     }
 
     public Entity getNearestEntity(Entity self) {
         float dist = 0;
         Entity found = null;
         for (Entity other : ents) {
-            if (other == self || other.health < 1) {
+            if (other == self || other.getHealth() < 1) {
                 continue;
             }
             float thisDist = other.getPos().dst2(self.getPos());
@@ -304,7 +346,7 @@ public class Gladiator extends ApplicationAdapter {
             debugCoolDown = 0.2f;
             showDebug = !showDebug;
         }
-        if (player.health < 1) {
+        if (player.getHealth() < 1) {
             return;
         }
 
@@ -320,25 +362,25 @@ public class Gladiator extends ApplicationAdapter {
 
         float delta = Gdx.graphics.getDeltaTime();
         float playerMove = PLAYER_SPEED * delta;
-        if (player.state == Entity.State.STUNNED) {
+        if (player.state == PlayerEntityImpl.State.STUNNED) {
             playerMove = 0;
         }
         Vector2 playerPos = player.getPos();
         attackCooldown = attackCooldown - delta;
         player.setIsRunning(leftArrow || rightArrow || upArrow || downArrow);
         if (leftArrow && !player.isAttacking) {
-            player.body.applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
+            player.getBody().applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
             player.setIsRight(false);
         }
         if (rightArrow && !player.isAttacking) {
-            player.body.applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
+            player.getBody().applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
             player.setIsRight(true);
         }
         if (upArrow && !player.isAttacking) {
-            player.body.applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
+            player.getBody().applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
         }
         if (downArrow && !player.isAttacking) {
-            player.body.applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
+            player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
         }
         if (attackButton) {
             if (attackCooldown < 0) {
