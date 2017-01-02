@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -13,16 +14,18 @@ import java.util.*;
 
 public class Gladiator extends ApplicationAdapter {
 
-    public static final float ENTITY_DAMPING = 20.0f;
+    public static final float ENTITY_DAMPING = 60.0f;
     public static final float ENTITY_RADIUS = 6;
-    public static final float ENTITY_DENSITY = 0.4f;
-    public static final float PLAYER_SPEED = 10.0f;
+    public static final float ENTITY_DENSITY = 1f;
+    public static final float PLAYER_SPEED = 30.0f;
     public static final float BOX_TO_WORLD = 10f;
     public static final float WORLD_TO_BOX = 0.1f;
     public static final float MAX_ENTITY_SPEED = 4.0f;
     public static final float ATTACK_COOLDOWN = 0.8f;
-    public static final float ATTACK_FORCE = 40f;
+    public static final float ATTACK_FORCE = 50f;
     public static final float PICKUP_RADIUS = 3f;
+    public static final float DARK_SCREEN_TIMER = 2.0f;
+    float buttonCooldown = 0.2f;
 
     final float VIRTUAL_HEIGHT = 180f;
     OrthographicCamera cam;
@@ -35,7 +38,8 @@ public class Gladiator extends ApplicationAdapter {
     float debugCoolDown;
 
 	PlayerEntityImpl player;
-	Texture background, hitboxImage;
+	Texture background, hitboxImage, backgroundNight, message, finishMessage, sleepMessage, talkMessage;
+    Sprite darkScreen;
 
 	List<Entity> ents;
     List<Ai> ais;
@@ -47,8 +51,17 @@ public class Gladiator extends ApplicationAdapter {
     Vector2 hitBoxSize = new Vector2(20, 20);
     private float elapsedTime = 0;
     MetaGame metaGame;
+    Body shopWall, talkWall, bunkWall1, bunkWall2, bunkWall3;
 
     Sound bassMusic, loseSound, sliceSound, trebleMusic;
+    Vector2 shopPos, sleepPos, talkPos;
+
+    boolean isVictory;
+    float buttonTimer;
+    float darkScreenTimer = 0f;
+    float darkScreenOpacity = 0f;
+    boolean fadeDirectionOut = true;
+    MetaGame.GameState nextState;
 
 	@Override
 	public void create () {
@@ -59,14 +72,26 @@ public class Gladiator extends ApplicationAdapter {
 		batch = new SpriteBatch();
         metaGame = new MetaGame();
 
-
 		background = new Texture("background.png");
+        backgroundNight = new Texture("background-night.png");
+        darkScreen = new Sprite(new Texture("dark-screen.png"));
         hitboxImage = new Texture("hitbox.png");
+        finishMessage = new Texture("finish-message.png");
+        sleepMessage = new Texture("sleep-message.png");
+        talkMessage = new Texture("talk-message.png");
 
         buildWall(new Vector2(12,146), new Vector2(20, 260)); // left
         buildWall(new Vector2(666,146), new Vector2(20, 260)); // right
         buildWall(new Vector2(337,10), new Vector2(630, 20)); // bottom
         buildWall(new Vector2(337,278), new Vector2(630, 20)); // top
+        shopWall = buildWall(new Vector2(555, 250), new Vector2(150, 30));
+        talkWall = buildWall(new Vector2(84, 100), new Vector2(28, 40));
+        bunkWall1 = buildWall(new Vector2(374, 260), new Vector2(78, 50));
+        bunkWall2 = buildWall(new Vector2(280, 284), new Vector2(78, 50));
+        bunkWall3 = buildWall(new Vector2(194, 250), new Vector2(78, 50));
+        shopPos = new Vector2(500, 220);
+        sleepPos = new Vector2(280, 240);
+        talkPos = new Vector2(90, 80);
 
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
@@ -99,7 +124,8 @@ public class Gladiator extends ApplicationAdapter {
         ents.add(player);
         elapsedTime = 0;
         attackCooldown = 0;
-        addWave(5);
+        isVictory = false;
+        addWave(10);
     }
 
     private void addWave(int size) {
@@ -163,7 +189,7 @@ public class Gladiator extends ApplicationAdapter {
         return new PickupEntity(pos, body);
     }
 
-    public void buildWall(Vector2 pos, Vector2 size) {
+    public Body buildWall(Vector2 pos, Vector2 size) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.StaticBody;
         bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
@@ -177,6 +203,11 @@ public class Gladiator extends ApplicationAdapter {
         fixtureDef.friction = 0;
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
+        return body;
+    }
+
+    public void resetPlayerPosition() {
+        player.getBody().setTransform(new Vector2(300 * WORLD_TO_BOX, 120 * WORLD_TO_BOX), player.getBody().getAngle());
     }
 
 	@Override
@@ -185,6 +216,9 @@ public class Gladiator extends ApplicationAdapter {
             resetGame();
             metaGame.playAgain();
         }
+        metaGame.update(this);
+        buttonTimer = buttonTimer - Gdx.graphics.getDeltaTime();
+        handleInput();
         if (!metaGame.isRenderingGame()) {
             world.step(Gdx.graphics.getDeltaTime(), 6, 2);
             cam.position.set(player.getPos().x, player.getPos().y, 0);
@@ -193,8 +227,9 @@ public class Gladiator extends ApplicationAdapter {
             metaGame.render(batch, player.getPos().sub(screenWidth * 0.5f, screenHeight * 0.5f));
             return;
         }
+
         if (!metaGame.isPaused()) {
-            handleInput();
+
             world.step(Gdx.graphics.getDeltaTime(), 6, 2);
             cam.position.set(player.getPos().x, player.getPos().y, 0);
             cam.update();
@@ -204,7 +239,21 @@ public class Gladiator extends ApplicationAdapter {
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		batch.begin();
-		batch.draw(background, 0, 0);
+        if (metaGame.gameState == MetaGame.GameState.NIGHT) {
+            batch.draw(backgroundNight, 0, 0);
+            shopWall.setActive(true);
+            talkWall.setActive(true);
+            bunkWall1.setActive(true);
+            bunkWall2.setActive(true);
+            bunkWall3.setActive(true);
+        } else {
+            batch.draw(background, 0, 0);
+            shopWall.setActive(false);
+            talkWall.setActive(false);
+            bunkWall1.setActive(false);
+            bunkWall2.setActive(false);
+            bunkWall3.setActive(false);
+        }
         Collections.sort(ents, new Comparator<Entity>() {
             @Override
             public int compare(Entity o1, Entity o2) {
@@ -223,8 +272,8 @@ public class Gladiator extends ApplicationAdapter {
 		}
         if (!metaGame.isPaused()) {
             if (player.getHealth() < 1) {
-                loseSound.play();
-                metaGame.gameState = MetaGame.GameState.LOSE;
+                //loseSound.play();
+                metaGame.setState(MetaGame.GameState.LOSE);
             }
             handleUpdate();
             if (showDebug && attackCooldown > 0) {
@@ -233,10 +282,45 @@ public class Gladiator extends ApplicationAdapter {
 
             elapsedTime += Gdx.graphics.getDeltaTime();
         }
-
+        if (metaGame.gameState == MetaGame.GameState.VICTORY) {
+            batch.draw(finishMessage, player.getPos().x - 50, player.getPos().y  + 70);
+        }
+        if (metaGame.gameState == MetaGame.GameState.NIGHT) {
+            if (player.getPos().dst2(shopPos) < 400) {
+                batch.draw(talkMessage, player.getPos().x - 50, player.getPos().y  + 70);
+            }
+            if (player.getPos().dst2(sleepPos) < 1600) {
+                batch.draw(sleepMessage, player.getPos().x - 50, player.getPos().y  + 70);
+            }
+            if (player.getPos().dst2(talkPos) < 900) {
+                batch.draw(talkMessage, player.getPos().x - 50, player.getPos().y  + 70);
+            }
+        }
+        if (nextState != null) {
+            darkScreenTimer = darkScreenTimer - Gdx.graphics.getDeltaTime();
+            if (!fadeDirectionOut) {
+                darkScreenOpacity = darkScreenTimer / DARK_SCREEN_TIMER;
+            } else {
+                darkScreenOpacity = MathUtils.clamp(1.0f - (darkScreenTimer / DARK_SCREEN_TIMER), 0, 1.0f);
+            }
+            cam.position.set(player.getPos().x, player.getPos().y, 0);
+            cam.update();
+            batch.setProjectionMatrix(cam.combined);
+            Vector2 pos = player.getPos().cpy().sub(screenWidth * 0.5f, screenHeight * 0.5f);
+            darkScreen.setPosition(pos.x, pos.y);
+            darkScreen.draw(batch, darkScreenOpacity);
+            if (darkScreenTimer < 0) {
+                resetPlayerPosition();
+                metaGame.setState(nextState);
+                nextState = null;
+            }
+        }
 		batch.end();
 
         if (metaGame.gameState == MetaGame.GameState.COUNTDOWN || metaGame.isSelectScreen()) {
+            for (Entity ent : ents) {
+                ent.update(elapsedTime);
+            }
             cam.position.set(player.getPos().x, player.getPos().y, 0);
             cam.update();
             batch.setProjectionMatrix(cam.combined);
@@ -288,8 +372,13 @@ public class Gladiator extends ApplicationAdapter {
                 aliveAi = true;
             }
         }
-        if (!aliveAi) {
-            metaGame.gameState = MetaGame.GameState.WIN;
+        if (!aliveAi && (metaGame.gameState == MetaGame.GameState.GAMEPLAY)) {
+            metaGame.setState(MetaGame.GameState.VICTORY);
+        }
+        if (metaGame.gameState != MetaGame.GameState.VICTORY) {
+            player.setIsVictory(false);
+        } else {
+            player.setIsVictory(true);
         }
         player.update(elapsedTime);
 
@@ -359,6 +448,7 @@ public class Gladiator extends ApplicationAdapter {
         boolean hitUp = Gdx.input.isKeyPressed(Input.Keys.W);
         boolean hitDown = Gdx.input.isKeyPressed(Input.Keys.S);
         boolean attackButton = hitDown || hitLeft || hitUp || hitRight;
+        boolean useButton = Gdx.input.isKeyPressed(Input.Keys.E);
 
         float delta = Gdx.graphics.getDeltaTime();
         float playerMove = PLAYER_SPEED * delta;
@@ -368,43 +458,67 @@ public class Gladiator extends ApplicationAdapter {
         Vector2 playerPos = player.getPos();
         attackCooldown = attackCooldown - delta;
         player.setIsRunning(leftArrow || rightArrow || upArrow || downArrow);
-        if (leftArrow && !player.isAttacking) {
-            player.getBody().applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
-            player.setIsRight(false);
-        }
-        if (rightArrow && !player.isAttacking) {
-            player.getBody().applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
-            player.setIsRight(true);
-        }
-        if (upArrow && !player.isAttacking) {
-            player.getBody().applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
-        }
-        if (downArrow && !player.isAttacking) {
-            player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
-        }
-        if (attackButton) {
-            if (attackCooldown < 0) {
-                sliceSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0 );
-                player.setIsAttacking(true);
-                attackCooldown = ATTACK_COOLDOWN;
-                hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
-                hitBoxSize = new Vector2(10, 10);
-                Vector2 hitBoxSizeHalf = hitBoxSize.cpy().scl(0.5f);
-                float doubleRadius = 2 * ENTITY_RADIUS;
-                if (hitDown) {
-                    hitBoxOffset.y = hitBoxOffset.y - (doubleRadius + hitBoxSizeHalf.y);
-                }
-                if (hitUp) {
-                    hitBoxOffset.y = hitBoxOffset.y + (doubleRadius + hitBoxSizeHalf.y);
-                }
-                if (hitRight) {
-                    hitBoxOffset.x = hitBoxOffset.x + (doubleRadius + hitBoxSizeHalf.x);
-                }
-                if (hitLeft) {
-                    hitBoxOffset.x = hitBoxOffset.x - (doubleRadius + hitBoxSizeHalf.x);
+        if (metaGame.gameState == MetaGame.GameState.GAMEPLAY || metaGame.gameState == MetaGame.GameState.NIGHT
+                || metaGame.gameState == MetaGame.GameState.VICTORY) {
+            if (leftArrow && !player.isAttacking) {
+                player.getBody().applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
+                player.setIsRight(false);
+            }
+            if (rightArrow && !player.isAttacking) {
+                player.getBody().applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
+                player.setIsRight(true);
+            }
+            if (upArrow && !player.isAttacking) {
+                player.getBody().applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
+            }
+            if (downArrow && !player.isAttacking) {
+                player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
+            }
+            if (attackButton) {
+                boolean isAttackingAllowed = metaGame.isRenderingGame() && metaGame.gameState != MetaGame.GameState.NIGHT;
+                if (attackCooldown < 0 && isAttackingAllowed) {
+                    //sliceSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0 );
+                    player.setIsAttacking(true);
+                    attackCooldown = ATTACK_COOLDOWN;
+                    hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
+                    hitBoxSize = new Vector2(10, 10);
+                    Vector2 hitBoxSizeHalf = hitBoxSize.cpy().scl(0.5f);
+                    float doubleRadius = 2 * ENTITY_RADIUS;
+                    if (hitDown) {
+                        hitBoxOffset.y = hitBoxOffset.y - (doubleRadius + hitBoxSizeHalf.y);
+                    }
+                    if (hitUp) {
+                        hitBoxOffset.y = hitBoxOffset.y + (doubleRadius + hitBoxSizeHalf.y);
+                    }
+                    if (hitRight) {
+                        hitBoxOffset.x = hitBoxOffset.x + (doubleRadius + hitBoxSizeHalf.x);
+                    }
+                    if (hitLeft) {
+                        hitBoxOffset.x = hitBoxOffset.x - (doubleRadius + hitBoxSizeHalf.x);
+                    }
                 }
             }
         }
 
+        if (buttonTimer < 0 && useButton && metaGame.gameState == MetaGame.GameState.NIGHT) {
+            if (playerPos.dst2(shopPos) < 400) {
+                buttonTimer = buttonCooldown;
+                metaGame.setState(MetaGame.GameState.SHOP);
+            }
+            if (playerPos.dst2(sleepPos) < 400) {
+                buttonTimer = buttonCooldown;
+                darkScreenTimer = DARK_SCREEN_TIMER;
+                fadeDirectionOut = true;
+                nextState = MetaGame.GameState.PLAYAGAIN;
+            }
+        }
+        if (buttonTimer < 0 && useButton) {
+            buttonTimer = buttonCooldown;
+            metaGame.updateGamestate(this);
+        }
+        if (buttonTimer < 0 && (upArrow || downArrow)) {
+            buttonTimer = buttonCooldown;
+            metaGame.moveCursor(upArrow);
+        }
     }
 }

@@ -27,10 +27,10 @@ public class PlayerEntityImpl implements Entity {
     public State state;
     boolean isRight, isRunning;
     AnimState animState;
-    Animation idle, run, slow, hurt, die, att;
+    Animation idle, run, slow, hurt, die, att, victory;
     int imageWidth = 43;
     int imageHeight = 44;
-    float slowCooldown = 0.6f;
+    float slowCooldown = 0.14f;
     float slowTimer;
     float dieTimer, attTimer;
     public boolean isAttacking;
@@ -38,6 +38,7 @@ public class PlayerEntityImpl implements Entity {
     Texture shadow;
     Sound thumpSound;
     int souls;
+    boolean isVictory;
 
     public PlayerEntityImpl(Vector2 pos, Body body) {
         animState = AnimState.IDLE;
@@ -54,9 +55,11 @@ public class PlayerEntityImpl implements Entity {
         TextureRegion[][] runRegions = TextureRegion.split(new Texture("player-run.png"), imageWidth, imageHeight);
         run = new Animation(1/10f, runRegions[0]);
         TextureRegion[][] slowRegions = TextureRegion.split(new Texture("player-slow.png"), imageWidth, imageHeight);
-        slow = new Animation(1/2f, slowRegions[0]);
+        slow = new Animation(0.8f, slowRegions[0]);
         TextureRegion[][] hurtRegions = TextureRegion.split(new Texture("player-hurt.png"), imageWidth, imageHeight);
         hurt = new Animation(1/2f, hurtRegions[0]);
+        TextureRegion[][] victoryRegions = TextureRegion.split(new Texture("victory-dance.png"), imageWidth, imageHeight);
+        victory = new Animation(0.5f, victoryRegions[0]);
         TextureRegion[][] dieRegions = TextureRegion.split(new Texture("player-die.png"), imageWidth, imageHeight);
         die = new Animation(1/12f, dieRegions[0]);
         TextureRegion[][] attRegions = TextureRegion.split(new Texture("player-attack.png"), imageWidth, imageHeight);
@@ -73,6 +76,7 @@ public class PlayerEntityImpl implements Entity {
         isRight = true;
         isRunning = false;
         isAttacking = false;
+        isVictory = false;
         dieTimer = 0;
         attTimer = 0;
         lastPos = pos.cpy();
@@ -95,6 +99,10 @@ public class PlayerEntityImpl implements Entity {
         this.isRight = isRight;
     }
 
+    public void setIsVictory(boolean isVictory) {
+        this.isVictory = isVictory;
+    }
+
     public void setAnimation(float time) {
         Animation choice = idle;
         boolean loop = true;
@@ -107,6 +115,9 @@ public class PlayerEntityImpl implements Entity {
         }
         if (animState == AnimState.HURT) {
             choice = hurt;
+        }
+        if (animState == AnimState.VICTORY) {
+            choice = victory;
         }
         if (animState == AnimState.ATT) {
             choice = att;
@@ -175,6 +186,9 @@ public class PlayerEntityImpl implements Entity {
                 animState = AnimState.SLOW;
             }
         }
+        if (!isRunning && isVictory) {
+            animState = AnimState.VICTORY;
+        }
         slowTimer = slowTimer - Gdx.graphics.getDeltaTime();
         if (health <= 0) {
             animState = AnimState.DIE;
@@ -240,7 +254,8 @@ public class PlayerEntityImpl implements Entity {
         SLOW,
         HURT,
         DIE,
-        ATT
+        ATT,
+        VICTORY
     }
 
     public enum State {

@@ -35,7 +35,7 @@ public class Ai {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
         if (playerEntity.health <= 0) {
             if (state != State.DEAD) {
-                screamSound.play(0.9f, MathUtils.random(0.5f, 2.0f), 0);
+                //screamSound.play(0.9f, MathUtils.random(0.5f, 2.0f), 0);
             }
             state = State.DEAD;
             playerEntity.update(time);
@@ -104,7 +104,7 @@ public class Ai {
 
     private void handleHitting(Entity target) {
         if (!sliceSoundPlaying) {
-            sliceSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
+            //sliceSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
             sliceSoundPlaying = true;
         }
         Rectangle playerBox = new Rectangle(target.getPos().x, target.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);

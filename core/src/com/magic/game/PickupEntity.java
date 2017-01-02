@@ -1,8 +1,10 @@
 package com.magic.game;
 
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -14,20 +16,24 @@ import static com.magic.game.Gladiator.MAX_ENTITY_SPEED;
 public class PickupEntity implements Entity {
 
     Sprite sprite;
-    float imageWidth = 6;
-    float imageHeight = 6;
+    int imageWidth = 9;
+    int imageHeight = 9;
     int health;
     Body body;
     Vector2 lastPos;
+    Animation idle;
 
     public PickupEntity(Vector2 pos, Body body) {
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
-        this.sprite = new Sprite(new Texture("coin.png"));
+        TextureRegion[][] idleRegions = TextureRegion.split(new Texture("coin.png"), imageWidth, imageHeight);
+        idle = new Animation(1/2f, idleRegions[0]);
+        this.sprite = new Sprite();
         this.sprite.setPosition(loc.x, loc.y);
         sprite.setSize(imageWidth, imageHeight);
         Color color = Color.hsb(MathUtils.random(360.0f), MathUtils.random(0.8f, 1.0f), MathUtils.random(0.2f, 1.0f));
 
         sprite.setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
+        sprite.setRegion(idle.getKeyFrame(0, true));
         this.body = body;
         this.health = 1;
         this.lastPos = pos.cpy();
@@ -80,7 +86,7 @@ public class PickupEntity implements Entity {
     public void update(float elapsedTime) {
         if (this.body != null) {
             Vector2 newPos = body.getPosition().cpy().scl(BOX_TO_WORLD);
-            Vector2 offset = new Vector2(3, 12);//new Vector2(sprite.getWidth(), sprite.getHeight()).scl(0.5f);
+            Vector2 offset = new Vector2(3, 8);//new Vector2(sprite.getWidth(), sprite.getHeight()).scl(0.5f);
             this.sprite.setPosition(newPos.x - offset.x, newPos.y - offset.y);
             Vector2 limitVel = body.getLinearVelocity();
             float speed = limitVel.len();
@@ -88,6 +94,7 @@ public class PickupEntity implements Entity {
                 body.setLinearVelocity(limitVel.nor().scl(MAX_ENTITY_SPEED));
             }
         }
+        sprite.setRegion(idle.getKeyFrame(elapsedTime, true));
     }
 
     @Override
