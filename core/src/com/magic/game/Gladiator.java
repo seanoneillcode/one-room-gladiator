@@ -7,6 +7,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
 
@@ -62,6 +63,7 @@ public class Gladiator extends ApplicationAdapter {
     float darkScreenOpacity = 0f;
     boolean fadeDirectionOut = true;
     MetaGame.GameState nextState;
+    Map<String, Float> playerParams;
 
 	@Override
 	public void create () {
@@ -102,6 +104,10 @@ public class Gladiator extends ApplicationAdapter {
         //trebleMusic = Gdx.audio.newSound(Gdx.files.internal("treble-music.wav"));
         //bassMusic.loop(0.2f);
         //trebleMusic.loop(0.1f);
+        playerParams = new HashMap<String, Float>();
+        playerParams.put("maxSpeed", 3.0f);
+        playerParams.put("maxHealth", 3.0f);
+        playerParams.put("damage", 1.0f);
 
         resetGame();
 	}
@@ -118,8 +124,8 @@ public class Gladiator extends ApplicationAdapter {
         ents = new ArrayList<Entity>();
         ais = new ArrayList<Ai>();
         pickups = new ArrayList<Entity>();
-        player = PlayerEntity(new Vector2(300, 120));
-        player.setHealth(4);
+        player = PlayerEntity(new Vector2(300, 120), (player == null ? playerParams : player.params));
+        player.setHealth(player.params.get("maxHealth").intValue());
         player.getSprite().setColor(1.0f, 0.1f, 0.1f, 1.0f);
         ents.add(player);
         elapsedTime = 0;
@@ -135,7 +141,11 @@ public class Gladiator extends ApplicationAdapter {
     }
 
     private void addEnemy() {
-        PlayerEntityImpl ent = PlayerEntity(getRandomPosition());
+        Map<String, Float> params = new HashMap<String, Float>();
+        params.put("maxSpeed", 3.0f);
+        params.put("maxHealth", 2.0f);
+        params.put("damage", 1.0f);
+        PlayerEntityImpl ent = PlayerEntity(getRandomPosition(), params);
         ents.add(ent);
         ais.add(new Ai(ent));
     }
@@ -153,7 +163,7 @@ public class Gladiator extends ApplicationAdapter {
         batch.setProjectionMatrix(cam.combined);
     }
 
-	public PlayerEntityImpl PlayerEntity(Vector2 pos) {
+	public PlayerEntityImpl PlayerEntity(Vector2 pos, Map<String, Float> params) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
@@ -168,7 +178,7 @@ public class Gladiator extends ApplicationAdapter {
         fixtureDef.friction = 0;
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
-        return new PlayerEntityImpl(pos, body);
+        return new PlayerEntityImpl(pos, body, params);
     }
 
     public Entity buildPickup(Vector2 pos) {
@@ -229,7 +239,6 @@ public class Gladiator extends ApplicationAdapter {
         }
 
         if (!metaGame.isPaused()) {
-
             world.step(Gdx.graphics.getDeltaTime(), 6, 2);
             cam.position.set(player.getPos().x, player.getPos().y, 0);
             cam.update();
@@ -354,7 +363,7 @@ public class Gladiator extends ApplicationAdapter {
             for (Entity ent : ents) {
                 if (ent != player && ent.getHealth() > 0) {
                     if (Intersector.overlaps(getEntityHitBox(ent), hitbox)) {
-                        if (ent.takeDamage(1) ) {
+                        if (ent.takeDamage(player.params.get("damage").intValue()) ) {
                             Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(ATTACK_FORCE);
                             ent.getBody().applyForceToCenter(dir, true);
                         }

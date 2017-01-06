@@ -177,13 +177,25 @@ public class MetaGame {
                 gameState = GameState.NIGHT;
             }
             if (shopSelectIndex == 1) {
-
+                if (game.player.souls > 0) {
+                    game.player.souls = game.player.souls - 1;
+                    Float maxHealth = game.player.params.get("maxHealth");
+                    game.player.params.put("maxHealth", maxHealth + 1.0f);
+                }
             }
             if (shopSelectIndex == 2) {
-
+                if (game.player.souls > 0) {
+                    game.player.souls = game.player.souls - 1;
+                    Float damage = game.player.params.get("damage");
+                    game.player.params.put("damage", damage + 1.0f);
+                }
             }
             if (shopSelectIndex == 3) {
-
+                if (game.player.souls > 0) {
+                    game.player.souls = game.player.souls - 1;
+                    Float maxSpeed = game.player.params.get("maxSpeed");
+                    game.player.params.put("maxSpeed", maxSpeed + 1.0f);
+                }
             }
             return;
         }

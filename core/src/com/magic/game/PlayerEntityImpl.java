@@ -12,7 +12,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import javafx.scene.paint.Color;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.magic.game.Gladiator.BOX_TO_WORLD;
 import static com.magic.game.Gladiator.MAX_ENTITY_SPEED;
@@ -40,7 +42,9 @@ public class PlayerEntityImpl implements Entity {
     int souls;
     boolean isVictory;
 
-    public PlayerEntityImpl(Vector2 pos, Body body) {
+    Map<String, Float> params;
+
+    public PlayerEntityImpl(Vector2 pos, Body body, Map<String, Float> params) {
         animState = AnimState.IDLE;
         this.sprite = new Sprite();
         sprite.setSize(imageWidth, imageHeight);
@@ -82,6 +86,7 @@ public class PlayerEntityImpl implements Entity {
         lastPos = pos.cpy();
         body.setUserData(this);
         souls = 0;
+        this.params = new HashMap<String, Float>(params);
     }
 
     public void addSoul() {
@@ -165,11 +170,12 @@ public class PlayerEntityImpl implements Entity {
             this.sprite.setPosition(newPos.x - offset.x, newPos.y - offset.y);
             Vector2 limitVel = body.getLinearVelocity();
             float speed = limitVel.len();
-            if (speed > MAX_ENTITY_SPEED ) {
+            float maxSpeed = params.get("maxSpeed");
+            if (speed > maxSpeed ) {
                 if (state == State.STUNNED) {
                     body.setLinearVelocity(limitVel.nor().scl(MAX_ENTITY_SPEED * 3));
                 } else {
-                    body.setLinearVelocity(limitVel.nor().scl(MAX_ENTITY_SPEED));
+                    body.setLinearVelocity(limitVel.nor().scl(maxSpeed));
                 }
             }
         }

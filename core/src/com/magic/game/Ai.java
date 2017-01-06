@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 
 public class Ai {
     PlayerEntityImpl playerEntity;
-    float speed = Gladiator.PLAYER_SPEED;
+//    float speed = Gladiator.PLAYER_SPEED;
 
     State state = State.MOVING_PLAYER;
     float attackTimer;
@@ -75,6 +75,7 @@ public class Ai {
             state = State.IDLE;
         }
         if (state == State.MOVING_PLAYER) {
+            float speed = playerEntity.params.get("maxSpeed");
             Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl(speed);
             playerEntity.body.applyLinearImpulse(dir, playerEntity.getPos(), true);
             playerEntity.setIsRunning(true);
@@ -111,7 +112,7 @@ public class Ai {
         Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
         hitBox = new Rectangle(playerEntity.getPos().x + dir.x, playerEntity.getPos().y + dir.y, weaponSize, weaponSize);
         if (hitBox.overlaps(playerBox)) {
-            if (target.takeDamage(1)) {
+            if (target.takeDamage(playerEntity.params.get("damage").intValue())) {
                 Vector2 force = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
                 target.getBody().applyForceToCenter(force, true);
             }
