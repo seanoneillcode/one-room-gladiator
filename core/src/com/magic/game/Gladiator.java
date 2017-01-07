@@ -100,10 +100,9 @@ public class Gladiator extends ApplicationAdapter {
 
         sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
         loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound.wav"));
-        //bassMusic = Gdx.audio.newSound(Gdx.files.internal("bass-music7.wav"));
-        //trebleMusic = Gdx.audio.newSound(Gdx.files.internal("treble-music.wav"));
+        bassMusic = Gdx.audio.newSound(Gdx.files.internal("kill-synth.ogg"));
+        trebleMusic = Gdx.audio.newSound(Gdx.files.internal("synth-runner.ogg"));
         //bassMusic.loop(0.2f);
-        //trebleMusic.loop(0.1f);
         playerParams = new HashMap<String, Float>();
         playerParams.put("maxSpeed", 5.0f);
         playerParams.put("maxHealth", 30.0f);
@@ -515,6 +514,8 @@ public class Gladiator extends ApplicationAdapter {
                 darkScreenTimer = DARK_SCREEN_TIMER;
                 fadeDirectionOut = true;
                 nextState = MetaGame.GameState.PLAYAGAIN;
+                trebleMusic.stop();
+                bassMusic.loop(0.2f);
             }
         }
         if (buttonTimer < 0 && useButton) {

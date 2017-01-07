@@ -160,6 +160,7 @@ public class MetaGame {
         if (gameState == GameState.IDEA) {
             game.resetPlayerPosition();
             gameState = GameState.COUNTDOWN;
+            game.bassMusic.loop(0.2f);
             return;
         }
         if (gameState == GameState.LOSE) {
@@ -203,6 +204,8 @@ public class MetaGame {
             game.nextState = GameState.NIGHT;
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
+            game.trebleMusic.loop(0.2f);
+            game.bassMusic.stop();
             return;
         }
     }
