@@ -105,8 +105,8 @@ public class Gladiator extends ApplicationAdapter {
         //bassMusic.loop(0.2f);
         //trebleMusic.loop(0.1f);
         playerParams = new HashMap<String, Float>();
-        playerParams.put("maxSpeed", 3.0f);
-        playerParams.put("maxHealth", 3.0f);
+        playerParams.put("maxSpeed", 5.0f);
+        playerParams.put("maxHealth", 30.0f);
         playerParams.put("damage", 1.0f);
 
         resetGame();
@@ -131,7 +131,7 @@ public class Gladiator extends ApplicationAdapter {
         elapsedTime = 0;
         attackCooldown = 0;
         isVictory = false;
-        addWave(10);
+        addWave(50);
     }
 
     private void addWave(int size) {
@@ -142,9 +142,9 @@ public class Gladiator extends ApplicationAdapter {
 
     private void addEnemy() {
         Map<String, Float> params = new HashMap<String, Float>();
-        params.put("maxSpeed", 3.0f);
+        params.put("maxSpeed", 4.0f);
         params.put("maxHealth", 2.0f);
-        params.put("damage", 1.0f);
+        params.put("damage", 2.0f);
         PlayerEntityImpl ent = PlayerEntity(getRandomPosition(), params);
         ents.add(ent);
         ais.add(new Ai(ent));
@@ -280,12 +280,14 @@ public class Gladiator extends ApplicationAdapter {
             }
 		}
         if (!metaGame.isPaused()) {
-            if (player.getHealth() < 1) {
-                //loseSound.play();
-                metaGame.setState(MetaGame.GameState.LOSE);
+            if (player.getHealth() < 1 && metaGame.gameState == MetaGame.GameState.GAMEPLAY && nextState == null) {
+                loseSound.play();
+                darkScreenTimer = DARK_SCREEN_TIMER;
+                fadeDirectionOut = true;
+                nextState = MetaGame.GameState.LOSE;
             }
             handleUpdate();
-            if (showDebug && attackCooldown > 0) {
+            if (showDebug && attackCooldown > (ATTACK_COOLDOWN / 2.0f)) {
                 batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
             }
 
@@ -348,18 +350,18 @@ public class Gladiator extends ApplicationAdapter {
     }
 
 	public static Rectangle getEntityHitBox(Entity ent) {
-        Vector2 offset = new Vector2(ENTITY_RADIUS * 0.5f, ENTITY_RADIUS * 0.5f);
-        return new Rectangle(ent.getPos().x - offset.x, ent.getPos().y - offset.y, ENTITY_RADIUS, ENTITY_RADIUS);
+        Vector2 offset = new Vector2(ENTITY_RADIUS, ENTITY_RADIUS);
+        return new Rectangle(ent.getPos().x - offset.x, ent.getPos().y - offset.y, ENTITY_RADIUS * 2, ENTITY_RADIUS * 2);
     }
 
 	public void handleUpdate() {
 
         // player hit
-        if (attackCooldown > (ATTACK_COOLDOWN / 2.0f)) {
-            hitbox = new Rectangle(
-                    player.getPos().x + hitBoxOffset.x,
-                    player.getPos().y + hitBoxOffset.y,
-                    hitBoxSize.x, hitBoxSize.y);
+        hitbox = new Rectangle(
+                player.getPos().x + hitBoxOffset.x,
+                player.getPos().y + hitBoxOffset.y,
+                hitBoxSize.x, hitBoxSize.y);
+        if (attackCooldown > (ATTACK_COOLDOWN / 2f)) {
             for (Entity ent : ents) {
                 if (ent != player && ent.getHealth() > 0) {
                     if (Intersector.overlaps(getEntityHitBox(ent), hitbox)) {
@@ -452,17 +454,17 @@ public class Gladiator extends ApplicationAdapter {
         boolean rightArrow = Gdx.input.isKeyPressed(Input.Keys.RIGHT);
         boolean upArrow = Gdx.input.isKeyPressed(Input.Keys.UP);
         boolean downArrow = Gdx.input.isKeyPressed(Input.Keys.DOWN);
-        boolean hitLeft = Gdx.input.isKeyPressed(Input.Keys.A);
-        boolean hitRight = Gdx.input.isKeyPressed(Input.Keys.D);
-        boolean hitUp = Gdx.input.isKeyPressed(Input.Keys.W);
-        boolean hitDown = Gdx.input.isKeyPressed(Input.Keys.S);
-        boolean attackButton = hitDown || hitLeft || hitUp || hitRight;
+        boolean attackButton = Gdx.input.isKeyPressed(Input.Keys.D);
         boolean useButton = Gdx.input.isKeyPressed(Input.Keys.E);
 
         float delta = Gdx.graphics.getDeltaTime();
         float playerMove = PLAYER_SPEED * delta;
         if (player.state == PlayerEntityImpl.State.STUNNED) {
             playerMove = 0;
+            upArrow = false;
+            downArrow = false;
+            leftArrow = false;
+            rightArrow = false;
         }
         Vector2 playerPos = player.getPos();
         attackCooldown = attackCooldown - delta;
@@ -483,27 +485,21 @@ public class Gladiator extends ApplicationAdapter {
             if (downArrow && !player.isAttacking) {
                 player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
             }
+            if (!downArrow && !upArrow && !leftArrow && !rightArrow && player.state != PlayerEntityImpl.State.STUNNED) {
+                player.getBody().setLinearVelocity(0, 0);
+            }
             if (attackButton) {
                 boolean isAttackingAllowed = metaGame.isRenderingGame() && metaGame.gameState != MetaGame.GameState.NIGHT;
                 if (attackCooldown < 0 && isAttackingAllowed) {
-                    //sliceSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0 );
+                    sliceSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0 );
                     player.setIsAttacking(true);
                     attackCooldown = ATTACK_COOLDOWN;
                     hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
                     hitBoxSize = new Vector2(10, 10);
-                    Vector2 hitBoxSizeHalf = hitBoxSize.cpy().scl(0.5f);
-                    float doubleRadius = 2 * ENTITY_RADIUS;
-                    if (hitDown) {
-                        hitBoxOffset.y = hitBoxOffset.y - (doubleRadius + hitBoxSizeHalf.y);
-                    }
-                    if (hitUp) {
-                        hitBoxOffset.y = hitBoxOffset.y + (doubleRadius + hitBoxSizeHalf.y);
-                    }
-                    if (hitRight) {
-                        hitBoxOffset.x = hitBoxOffset.x + (doubleRadius + hitBoxSizeHalf.x);
-                    }
-                    if (hitLeft) {
-                        hitBoxOffset.x = hitBoxOffset.x - (doubleRadius + hitBoxSizeHalf.x);
+                    if (player.isRight) {
+                        hitBoxOffset.x = 1.4f * ENTITY_RADIUS;
+                    } else {
+                        hitBoxOffset.x = -3.4f * ENTITY_RADIUS;
                     }
                 }
             }

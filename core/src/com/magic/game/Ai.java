@@ -15,7 +15,7 @@ public class Ai {
     float attackTimeMax = 0.8f;
     float attackHitStartTime = 0.6f;
     float attackHitEndTime = 0.4f;
-    float weaponSize = 10f;
+    float weaponSize = 12f;
     float attackRange = 32f;
     float pickupTimer;
     float maxPickupTime = 1.0f;
@@ -35,7 +35,7 @@ public class Ai {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
         if (playerEntity.health <= 0) {
             if (state != State.DEAD) {
-                //screamSound.play(0.9f, MathUtils.random(0.5f, 2.0f), 0);
+                screamSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0);
             }
             state = State.DEAD;
             playerEntity.update(time);
@@ -61,7 +61,11 @@ public class Ai {
                         state = State.IDLE;
                     } else {
                         if (target instanceof PlayerEntityImpl && target.getPos().dst(playerEntity.getPos()) < attackRange) {
-                            state = State.ATTACKING;
+                            if (Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
+                                state = State.ATTACKING;
+                            } else {
+                                state = State.MOVING_PLAYER;
+                            }
                         } else {
                             if (attackTimer < 0) {
                                 state = State.MOVING_PLAYER;
@@ -76,7 +80,15 @@ public class Ai {
         }
         if (state == State.MOVING_PLAYER) {
             float speed = playerEntity.params.get("maxSpeed");
-            Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl(speed);
+            Vector2 targetPos = target.getPos().cpy();
+            if (target instanceof PlayerEntityImpl) {
+                if (targetPos.x < playerEntity.getPos().x) {
+                    targetPos.x = targetPos.x + (2 * Gladiator.ENTITY_RADIUS);
+                } else {
+                    targetPos.x = targetPos.x - (2 * Gladiator.ENTITY_RADIUS);
+                }
+            }
+            Vector2 dir = targetPos.sub(playerEntity.getPos()).nor().scl(speed);
             playerEntity.body.applyLinearImpulse(dir, playerEntity.getPos(), true);
             playerEntity.setIsRunning(true);
             playerEntity.setIsRight(dir.x > 0);
@@ -105,13 +117,20 @@ public class Ai {
 
     private void handleHitting(Entity target) {
         if (!sliceSoundPlaying) {
-            //sliceSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
+            sliceSound.play(0.4f, MathUtils.random(0.5f, 2.0f), 0);
             sliceSoundPlaying = true;
         }
-        Rectangle playerBox = new Rectangle(target.getPos().x, target.getPos().y, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
-        Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
-        hitBox = new Rectangle(playerEntity.getPos().x + dir.x, playerEntity.getPos().y + dir.y, weaponSize, weaponSize);
-        if (hitBox.overlaps(playerBox)) {
+        Rectangle targetBox = new Rectangle(target.getPos().x - Gladiator.ENTITY_RADIUS,
+                target.getPos().y - Gladiator.ENTITY_RADIUS, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
+//        Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
+//        hitBox = new Rectangle(playerEntity.getPos().x + dir.x, playerEntity.getPos().y + dir.y, weaponSize, weaponSize);
+        Vector2 offset = new Vector2(weaponSize * 1.3f, 0);
+        if (target.getPos().x < playerEntity.getPos().x) {
+            offset.x = offset.x * -1f;
+        }
+        hitBox = new Rectangle(playerEntity.getPos().x + offset.x - Gladiator.ENTITY_RADIUS,
+                playerEntity.getPos().y + offset.y - Gladiator.ENTITY_RADIUS, weaponSize, weaponSize);
+        if (hitBox.overlaps(targetBox)) {
             if (target.takeDamage(playerEntity.params.get("damage").intValue())) {
                 Vector2 force = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((Gladiator.ATTACK_FORCE / 2));
                 target.getBody().applyForceToCenter(force, true);

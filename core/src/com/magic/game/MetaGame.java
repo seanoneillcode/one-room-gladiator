@@ -32,7 +32,7 @@ public class MetaGame {
     private int playerSouls;
 
     MetaGame () {
-        gameState = GameState.CONTROLS;
+        gameState = GameState.GAMEPLAY;
         controlsTex = new Texture("controls.png");
         ideaTex = new Texture("idea.png");
         winTex = new Texture("you-win.png");
