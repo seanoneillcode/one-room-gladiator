@@ -6,6 +6,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
+import java.util.List;
+
 public class Ai {
     PlayerEntityImpl playerEntity;
 //    float speed = Gladiator.PLAYER_SPEED;
@@ -31,8 +33,29 @@ public class Ai {
         sliceSoundPlaying = false;
     }
 
-    public void update(Entity target, Gladiator gladiator, float time) {
+    public Entity getNearestEntity(List<Entity> ents) {
+        float dist = 0;
+        Entity found = null;
+        Entity self = this.playerEntity;
+        for (Entity other : ents) {
+            if (other == self || other.getHealth() < 1) {
+                continue;
+            }
+            if (other instanceof PlayerEntityImpl && !isTarget(other)) {
+                continue;
+            }
+            float thisDist = other.getPos().dst2(self.getPos());
+            if (thisDist < dist || found == null) {
+                found = other;
+                dist = thisDist;
+            }
+        }
+        return found;
+    }
+
+    public void update(Gladiator gladiator, float time, List<Entity> ents) {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
+        Entity target = getNearestEntity(ents);
         if (playerEntity.health <= 0) {
             if (state != State.DEAD) {
                 screamSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0);
@@ -60,7 +83,7 @@ public class Ai {
                     if (target == null){
                         state = State.IDLE;
                     } else {
-                        if (target instanceof PlayerEntityImpl && target.getPos().dst(playerEntity.getPos()) < attackRange) {
+                        if (isTarget(target) && target.getPos().dst(playerEntity.getPos()) < attackRange) {
                             if (Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
                                 state = State.ATTACKING;
                             } else {
@@ -113,6 +136,10 @@ public class Ai {
         }
 
         playerEntity.update(time);
+    }
+
+    private boolean isTarget(Entity target) {
+        return target instanceof PlayerEntityImpl && ((PlayerEntityImpl) target).getTeam() != playerEntity.getTeam();
     }
 
     private void handleHitting(Entity target) {

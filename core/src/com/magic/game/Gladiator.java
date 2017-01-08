@@ -5,11 +5,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
+import javafx.scene.paint.*;
 
 import java.util.*;
 
@@ -107,11 +109,18 @@ public class Gladiator extends ApplicationAdapter {
         playerParams.put("maxSpeed", 5.0f);
         playerParams.put("maxHealth", 30.0f);
         playerParams.put("damage", 1.0f);
+        playerParams.put("souls", 0f);
+        playerParams.put("team", 7f);
 
         resetGame();
 	}
 
     public void resetGame() {
+        cleanGameArea();
+        addWave(3, 6);
+    }
+
+    public void cleanGameArea() {
         if (ents != null) {
             for (Entity ent : ents) {
                 if (ent.getBody() != null) {
@@ -130,21 +139,36 @@ public class Gladiator extends ApplicationAdapter {
         elapsedTime = 0;
         attackCooldown = 0;
         isVictory = false;
-        addWave(50);
     }
 
-    private void addWave(int size) {
-        for (int i = 0; i < size; i++) {
-            addEnemy();
+    private void addWave(int size, int numTeams) {
+        List<Float> teamColors = new ArrayList<Float>();
+        float startColor = 0;
+        for (int i = 0; i < numTeams; i++) {
+            teamColors.add(startColor);
+            startColor = startColor + (360.0f / numTeams);
+        }
+        int membersPerTeam = size / numTeams;
+        for (int i = 0, team = 0; i < size; i++) {
+            if (i >= membersPerTeam) {
+                team++;
+                membersPerTeam = membersPerTeam + membersPerTeam;
+            }
+            addEnemy(team, teamColors.get(team));
         }
     }
 
-    private void addEnemy() {
+    private void addEnemy(int team, float hue) {
         Map<String, Float> params = new HashMap<String, Float>();
         params.put("maxSpeed", 4.0f);
         params.put("maxHealth", 2.0f);
         params.put("damage", 2.0f);
+        params.put("souls", 0f);
+        params.put("team", (float)team);
+
+        javafx.scene.paint.Color color = javafx.scene.paint.Color.hsb(hue, MathUtils.random(0.8f, 1.0f), MathUtils.random(0.2f, 1.0f));
         PlayerEntityImpl ent = PlayerEntity(getRandomPosition(), params);
+        ent.getSprite().setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
         ents.add(ent);
         ais.add(new Ai(ent));
     }
@@ -321,6 +345,9 @@ public class Gladiator extends ApplicationAdapter {
             darkScreen.draw(batch, darkScreenOpacity);
             if (darkScreenTimer < 0) {
                 resetPlayerPosition();
+                if (nextState == MetaGame.GameState.NIGHT) {
+                    cleanGameArea();
+                }
                 metaGame.setState(nextState);
                 nextState = null;
             }
@@ -367,6 +394,7 @@ public class Gladiator extends ApplicationAdapter {
                         if (ent.takeDamage(player.params.get("damage").intValue()) ) {
                             Vector2 dir = ent.getPos().cpy().sub(player.getPos()).nor().scl(ATTACK_FORCE);
                             ent.getBody().applyForceToCenter(dir, true);
+                            break;
                         }
                     }
                 }
@@ -377,8 +405,8 @@ public class Gladiator extends ApplicationAdapter {
 
         boolean aliveAi = false;
         for (Ai ai : ais) {
-            ai.update(getNearestEntity(ai.playerEntity), this, elapsedTime);
-            if (ai.state != Ai.State.DEAD) {
+            ai.update(this, elapsedTime, ents);
+            if (ai.state != Ai.State.DEAD && ai.playerEntity.getTeam() != player.getTeam()) {
                 aliveAi = true;
             }
         }
@@ -417,22 +445,6 @@ public class Gladiator extends ApplicationAdapter {
             }
         }
         ents.addAll(newEnts);
-    }
-
-    public Entity getNearestEntity(Entity self) {
-        float dist = 0;
-        Entity found = null;
-        for (Entity other : ents) {
-            if (other == self || other.getHealth() < 1) {
-                continue;
-            }
-            float thisDist = other.getPos().dst2(self.getPos());
-            if (thisDist < dist || found == null) {
-                found = other;
-                dist = thisDist;
-            }
-        }
-        return found;
     }
 
 	public void handleInput() {
@@ -509,13 +521,18 @@ public class Gladiator extends ApplicationAdapter {
                 buttonTimer = buttonCooldown;
                 metaGame.setState(MetaGame.GameState.SHOP);
             }
-            if (playerPos.dst2(sleepPos) < 400) {
+            if (playerPos.dst2(sleepPos) < 1600) {
                 buttonTimer = buttonCooldown;
                 darkScreenTimer = DARK_SCREEN_TIMER;
                 fadeDirectionOut = true;
                 nextState = MetaGame.GameState.PLAYAGAIN;
                 trebleMusic.stop();
-                bassMusic.loop(0.2f);
+                bassMusic.loop(0.1f);
+            }
+            if (playerPos.dst2(talkPos) < 900) {
+                buttonTimer = buttonCooldown;
+                metaGame.pickRandomAdvice();
+                metaGame.setState(MetaGame.GameState.ADVICE);
             }
         }
         if (buttonTimer < 0 && useButton) {

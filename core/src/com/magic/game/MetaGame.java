@@ -17,7 +17,7 @@ public class MetaGame {
 
     public GameState gameState;
     Texture currentTexture, controlsTex, ideaTex, winTex, loseTex, selectTex, shopTex,
-            shopExitButton, shopBuyButton;
+            shopExitButton, shopBuyButton, adviceTex;
     Animation countdownAnim;
     float elapsedTime;
     boolean isPlayAgainSelected;
@@ -30,9 +30,10 @@ public class MetaGame {
     };
     private BitmapFont font;
     private int playerSouls;
+    private String adviceText = "my advice is to set variables correctly";
 
     MetaGame () {
-        gameState = GameState.GAMEPLAY;
+        gameState = GameState.CONTROLS;
         controlsTex = new Texture("controls.png");
         ideaTex = new Texture("idea.png");
         winTex = new Texture("you-win.png");
@@ -41,6 +42,7 @@ public class MetaGame {
         shopTex = new Texture("shop-screen.png");
         shopExitButton = new Texture("exit-button.png");
         shopBuyButton = new Texture("buy-button.png");
+        adviceTex = new Texture("talk-bad-screen.png");
         TextureRegion[][] idleRegions = TextureRegion.split(new Texture("countdown.png"), 40, 40);
         countdownAnim = new Animation(1f, idleRegions[0]);
         elapsedTime = 0;
@@ -93,7 +95,10 @@ public class MetaGame {
         if (gameState == GameState.VICTORY) {
             currentTexture = null;
         }
-        this.playerSouls = game.player.souls;
+        if (gameState == GameState.ADVICE) {
+            currentTexture = adviceTex;
+        }
+        this.playerSouls = game.player.getSouls();
     }
 
     public void playAgain() {
@@ -122,6 +127,9 @@ public class MetaGame {
                 }
 
                 font.draw(batch, String.valueOf(playerSouls), pos.x + 220, pos.y + 122);
+            }
+            if (gameState == GameState.ADVICE) {
+                font.drawWrapped(batch, adviceText, pos.x + 10, pos.y + 70, 220);
             }
         } else {
             if (gameState == GameState.COUNTDOWN) {
@@ -152,6 +160,17 @@ public class MetaGame {
         this.gameState = state;
     }
 
+    public void pickRandomAdvice() {
+        String[] advices = new String[] {
+                "Run away to stay alive in the short term",
+                "Saw those little glowing things when you wasted someone?\nThose were bio chips",
+                "If you don't upgrade your self you'll get crushed later,\nby someone like me!",
+                "You might want to just end it now, it doesn't get better",
+                "What are you in this for?\nGlory ? Crime? The killing?"
+        };
+        adviceText = advices[MathUtils.random(advices.length - 1)];
+    }
+
     public void updateGamestate(Gladiator game) {
         if (gameState == GameState.CONTROLS) {
             gameState = GameState.IDEA;
@@ -160,7 +179,7 @@ public class MetaGame {
         if (gameState == GameState.IDEA) {
             game.resetPlayerPosition();
             gameState = GameState.COUNTDOWN;
-            game.bassMusic.loop(0.2f);
+            game.bassMusic.loop(0.1f);
             return;
         }
         if (gameState == GameState.LOSE) {
@@ -178,22 +197,22 @@ public class MetaGame {
                 gameState = GameState.NIGHT;
             }
             if (shopSelectIndex == 1) {
-                if (game.player.souls > 0) {
-                    game.player.souls = game.player.souls - 1;
+                if (game.player.getSouls() > 4) {
+                    game.player.setSouls(game.player.getSouls() - 5);
                     Float maxHealth = game.player.params.get("maxHealth");
                     game.player.params.put("maxHealth", maxHealth + 1.0f);
                 }
             }
             if (shopSelectIndex == 2) {
-                if (game.player.souls > 0) {
-                    game.player.souls = game.player.souls - 1;
+                if (game.player.getSouls() > 9) {
+                    game.player.setSouls(game.player.getSouls() - 10);
                     Float damage = game.player.params.get("damage");
                     game.player.params.put("damage", damage + 1.0f);
                 }
             }
             if (shopSelectIndex == 3) {
-                if (game.player.souls > 0) {
-                    game.player.souls = game.player.souls - 1;
+                if (game.player.getSouls() > 2) {
+                    game.player.setSouls(game.player.getSouls() - 3);
                     Float maxSpeed = game.player.params.get("maxSpeed");
                     game.player.params.put("maxSpeed", maxSpeed + 1.0f);
                 }
@@ -207,6 +226,9 @@ public class MetaGame {
             game.trebleMusic.loop(0.2f);
             game.bassMusic.stop();
             return;
+        }
+        if (gameState == GameState.ADVICE) {
+            gameState = GameState.NIGHT;
         }
     }
 
@@ -223,7 +245,7 @@ public class MetaGame {
         SCREEN_TRANSITION,
         PLAYAGAIN,
         SHOP,
-        NIGHT
-
+        NIGHT,
+        ADVICE
     }
 }

@@ -39,8 +39,8 @@ public class PlayerEntityImpl implements Entity {
     Vector2 lastPos;
     Texture shadow;
     Sound thumpSound;
-    int souls;
     boolean isVictory;
+    int team;
 
     Map<String, Float> params;
 
@@ -49,9 +49,6 @@ public class PlayerEntityImpl implements Entity {
         this.sprite = new Sprite();
         sprite.setSize(imageWidth, imageHeight);
         sprite.setOrigin(imageWidth / 2, imageHeight);
-        Color color = Color.hsb(MathUtils.random(360.0f), MathUtils.random(0.8f, 1.0f), MathUtils.random(0.2f, 1.0f));
-
-        sprite.setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
 
         shadow = new Texture("player-shadow.png");
         TextureRegion[][] idleRegions = TextureRegion.split(new Texture("player-idle.png"), imageWidth, imageHeight);
@@ -85,12 +82,16 @@ public class PlayerEntityImpl implements Entity {
         attTimer = 0;
         lastPos = pos.cpy();
         body.setUserData(this);
-        souls = 0;
         this.params = new HashMap<String, Float>(params);
+        this.team = params.get("team").intValue();
+    }
+
+    public int getTeam() {
+        return team;
     }
 
     public void addSoul() {
-        souls = souls + 1;
+        this.params.put("souls", params.get("souls") + 1);
     }
 
     public void setIsAttacking(boolean isAttacking) {
@@ -161,6 +162,14 @@ public class PlayerEntityImpl implements Entity {
             }
             this.isRunning = false;
         }
+    }
+
+    public int getSouls() {
+        return params.get("souls").intValue();
+    }
+
+    public void setSouls(int value) {
+        params.put("souls", Integer.valueOf(value).floatValue());
     }
 
     public void update(float time) {
