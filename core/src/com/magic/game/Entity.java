@@ -15,4 +15,5 @@ public interface Entity {
     Body getBody();
     void update(float elapsedTime);
     void destroyBody();
+    PlayerState getState();
 }

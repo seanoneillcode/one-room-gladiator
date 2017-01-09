@@ -22,6 +22,7 @@ public class PickupEntity implements Entity {
     Body body;
     Vector2 lastPos;
     Animation idle;
+    PlayerState state;
 
     public PickupEntity(Vector2 pos, Body body) {
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
@@ -38,6 +39,7 @@ public class PickupEntity implements Entity {
         this.health = 1;
         this.lastPos = pos.cpy();
         body.setUserData(this);
+        state = PlayerState.IDLE;
     }
 
     @Override
@@ -58,6 +60,10 @@ public class PickupEntity implements Entity {
     @Override
     public Sprite getSprite() {
         return sprite;
+    }
+
+    public PlayerState getState() {
+        return state;
     }
 
     @Override
@@ -95,6 +101,9 @@ public class PickupEntity implements Entity {
             }
         }
         sprite.setRegion(idle.getKeyFrame(elapsedTime, true));
+        if (health <= 0) {
+            state = PlayerState.DEAD;
+        }
     }
 
     @Override

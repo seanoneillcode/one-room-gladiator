@@ -10,17 +10,14 @@ import java.util.List;
 
 public class Ai {
     PlayerEntityImpl playerEntity;
-//    float speed = Gladiator.PLAYER_SPEED;
 
-    State state = State.MOVING_PLAYER;
+    PlayerState intendedState = PlayerState.IDLE;
     float attackTimer;
     float attackTimeMax = 0.8f;
     float attackHitStartTime = 0.6f;
     float attackHitEndTime = 0.4f;
     float weaponSize = 12f;
     float attackRange = 32f;
-    float pickupTimer;
-    float maxPickupTime = 1.0f;
 
     Rectangle hitBox;
     Sound sliceSound, screamSound;
@@ -57,51 +54,34 @@ public class Ai {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
         Entity target = getNearestEntity(ents);
         if (playerEntity.health <= 0) {
-            if (state != State.DEAD) {
-                screamSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0);
+            if (playerEntity.getState() != PlayerState.DEAD) {
+                screamSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
             }
-            state = State.DEAD;
             playerEntity.update(time);
             return;
         }
 
-        if (playerEntity.state == PlayerEntityImpl.State.STUNNED) {
-            state = State.STUNNED;
+        if (target == null){
+            intendedState = PlayerState.IDLE;
         } else {
-            if (state == State.STUNNED) {
-                if (playerEntity.state == PlayerEntityImpl.State.NORMAL) {
-                    state = State.PICKINGUP;
-                    pickupTimer = maxPickupTime;
+            if (isTarget(target) && target.getPos().dst(playerEntity.getPos()) < attackRange) {
+                if (Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
+                    intendedState = PlayerState.ATTACKING;
+                } else {
+                    intendedState = PlayerState.MOVING;
                 }
             } else {
-                if (state == State.PICKINGUP) {
-                    pickupTimer = pickupTimer - Gdx.graphics.getDeltaTime();
-                    if (pickupTimer < 0) {
-                        state = State.MOVING_PLAYER;
-                    }
-                } else {
-                    if (target == null){
-                        state = State.IDLE;
-                    } else {
-                        if (isTarget(target) && target.getPos().dst(playerEntity.getPos()) < attackRange) {
-                            if (Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
-                                state = State.ATTACKING;
-                            } else {
-                                state = State.MOVING_PLAYER;
-                            }
-                        } else {
-                            if (attackTimer < 0) {
-                                state = State.MOVING_PLAYER;
-                            }
-                        }
-                    }
+                if (attackTimer < 0) {
+                    intendedState = PlayerState.MOVING;
                 }
             }
         }
-        if (target == null){
-            state = State.IDLE;
+
+        if (intendedState == PlayerState.IDLE) {
+            playerEntity.setState(PlayerState.IDLE);
         }
-        if (state == State.MOVING_PLAYER) {
+
+        if (intendedState == PlayerState.MOVING) {
             float speed = playerEntity.params.get("maxSpeed");
             Vector2 targetPos = target.getPos().cpy();
             if (target instanceof PlayerEntityImpl) {
@@ -113,12 +93,11 @@ public class Ai {
             }
             Vector2 dir = targetPos.sub(playerEntity.getPos()).nor().scl(speed);
             playerEntity.body.applyLinearImpulse(dir, playerEntity.getPos(), true);
-            playerEntity.setIsRunning(true);
             playerEntity.setIsRight(dir.x > 0);
+            playerEntity.setState(PlayerState.MOVING);
         }
 
-        if (state == State.ATTACKING) {
-            playerEntity.setIsRunning(false);
+        if (intendedState == PlayerState.ATTACKING) {
             if (attackTimer < 0) {
                 attackTimer = attackTimeMax;
                 Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
@@ -126,12 +105,11 @@ public class Ai {
             } else {
                 if (attackTimer > attackHitEndTime && attackTimer < attackHitStartTime) {
                     handleHitting(target);
-                    playerEntity.setIsAttacking(true);
+                    playerEntity.setState(PlayerState.ATTACKING);
                     gladiator.drawRect(hitBox);
                 }
             }
         } else {
-            playerEntity.setIsAttacking(false);
             sliceSoundPlaying = false;
         }
 
@@ -149,8 +127,6 @@ public class Ai {
         }
         Rectangle targetBox = new Rectangle(target.getPos().x - Gladiator.ENTITY_RADIUS,
                 target.getPos().y - Gladiator.ENTITY_RADIUS, Gladiator.ENTITY_RADIUS*2, Gladiator.ENTITY_RADIUS*2);
-//        Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
-//        hitBox = new Rectangle(playerEntity.getPos().x + dir.x, playerEntity.getPos().y + dir.y, weaponSize, weaponSize);
         Vector2 offset = new Vector2(weaponSize * 1.3f, 0);
         if (target.getPos().x < playerEntity.getPos().x) {
             offset.x = offset.x * -1f;
@@ -163,14 +139,5 @@ public class Ai {
                 target.getBody().applyForceToCenter(force, true);
             }
         }
-    }
-
-    public enum State {
-        MOVING_PLAYER,
-        ATTACKING,
-        DEAD,
-        STUNNED,
-        PICKINGUP,
-        IDLE
     }
 }

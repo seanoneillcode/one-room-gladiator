@@ -23,9 +23,9 @@ public class Gladiator extends ApplicationAdapter {
     public static final float PLAYER_SPEED = 30.0f;
     public static final float BOX_TO_WORLD = 10f;
     public static final float WORLD_TO_BOX = 0.1f;
-    public static final float MAX_ENTITY_SPEED = 4.0f;
+    public static final float MAX_ENTITY_SPEED = 8.0f;
     public static final float ATTACK_COOLDOWN = 0.8f;
-    public static final float ATTACK_FORCE = 50f;
+    public static final float ATTACK_FORCE = 40f;
     public static final float PICKUP_RADIUS = 3f;
     public static final float DARK_SCREEN_TIMER = 2.0f;
     float buttonCooldown = 0.2f;
@@ -110,14 +110,14 @@ public class Gladiator extends ApplicationAdapter {
         playerParams.put("maxHealth", 30.0f);
         playerParams.put("damage", 1.0f);
         playerParams.put("souls", 0f);
-        playerParams.put("team", 7f);
+        playerParams.put("team", -1f);
 
         resetGame();
 	}
 
     public void resetGame() {
         cleanGameArea();
-        addWave(3, 6);
+        addWave(1, 0);
     }
 
     public void cleanGameArea() {
@@ -142,27 +142,34 @@ public class Gladiator extends ApplicationAdapter {
     }
 
     private void addWave(int size, int numTeams) {
-        List<Float> teamColors = new ArrayList<Float>();
-        float startColor = 0;
-        for (int i = 0; i < numTeams; i++) {
-            teamColors.add(startColor);
-            startColor = startColor + (360.0f / numTeams);
-        }
-        int membersPerTeam = size / numTeams;
-        for (int i = 0, team = 0; i < size; i++) {
-            if (i >= membersPerTeam) {
-                team++;
-                membersPerTeam = membersPerTeam + membersPerTeam;
+        if (numTeams == 0) {
+            for (int i = 0; i < size; i++) {
+                addEnemy(i, MathUtils.random(360f));
             }
-            addEnemy(team, teamColors.get(team));
+        } else {
+            List<Float> teamColors = new ArrayList<Float>();
+            float startColor = 0;
+            for (int i = 0; i < numTeams; i++) {
+                teamColors.add(startColor);
+                startColor = startColor + (360.0f / numTeams);
+            }
+            int membersPerTeam = size / numTeams;
+            for (int i = 0, team = 0; i < size; i++) {
+                if (i >= membersPerTeam) {
+                    team++;
+                    membersPerTeam = membersPerTeam + membersPerTeam;
+                }
+                addEnemy(team, teamColors.get(team));
+            }
         }
+
     }
 
     private void addEnemy(int team, float hue) {
         Map<String, Float> params = new HashMap<String, Float>();
         params.put("maxSpeed", 4.0f);
-        params.put("maxHealth", 2.0f);
-        params.put("damage", 2.0f);
+        params.put("maxHealth", 20.0f);
+        params.put("damage", 1.0f);
         params.put("souls", 0f);
         params.put("team", (float)team);
 
@@ -299,9 +306,15 @@ public class Gladiator extends ApplicationAdapter {
             }
             if (showDebug && ent.getBody() != null) {
                 Rectangle entHit = getEntityHitBox(ent);
+                Color color = Color.BLUE;
+                if (ent instanceof PlayerEntityImpl && ((PlayerEntityImpl)ent).damageTimer > 0) {
+                    color = Color.RED;
+                }
+                batch.setColor(color);
                 batch.draw(hitboxImage, entHit.x, entHit.y, entHit.width, entHit.height);
             }
 		}
+        batch.setColor(Color.WHITE);
         if (!metaGame.isPaused()) {
             if (player.getHealth() < 1 && metaGame.gameState == MetaGame.GameState.GAMEPLAY && nextState == null) {
                 loseSound.play();
@@ -399,14 +412,12 @@ public class Gladiator extends ApplicationAdapter {
                     }
                 }
             }
-        } else {
-            player.setIsAttacking(false);
         }
 
         boolean aliveAi = false;
         for (Ai ai : ais) {
             ai.update(this, elapsedTime, ents);
-            if (ai.state != Ai.State.DEAD && ai.playerEntity.getTeam() != player.getTeam()) {
+            if (ai.playerEntity.getState() != PlayerState.DEAD && ai.playerEntity.getTeam() != player.getTeam()) {
                 aliveAi = true;
             }
         }
@@ -429,7 +440,7 @@ public class Gladiator extends ApplicationAdapter {
         Iterator<Entity> entIter = ents.iterator();
         while(entIter.hasNext()) {
             Entity ent = entIter.next();
-            if (ent.getHealth() <= 0 && ent.getBody() != null && ent != player) {
+            if (ent.getState() == PlayerState.DEAD && ent.getBody() != null && ent != player) {
                 if (!(ent instanceof PickupEntity)) {
                     Entity newEnt = buildPickup(ent.getPos());
                     newEnts.add(newEnt);
@@ -470,7 +481,7 @@ public class Gladiator extends ApplicationAdapter {
 
         float delta = Gdx.graphics.getDeltaTime();
         float playerMove = PLAYER_SPEED * delta;
-        if (player.state == PlayerEntityImpl.State.STUNNED) {
+        if (player.getState() == PlayerState.STUNNED) {
             playerMove = 0;
             upArrow = false;
             downArrow = false;
@@ -479,7 +490,11 @@ public class Gladiator extends ApplicationAdapter {
         }
         Vector2 playerPos = player.getPos();
         attackCooldown = attackCooldown - delta;
-        player.setIsRunning(leftArrow || rightArrow || upArrow || downArrow);
+        if (leftArrow || rightArrow || upArrow || downArrow && (player.getState() != PlayerState.STUNNED)) {
+            player.setState(PlayerState.MOVING);
+        } else {
+            player.setState(PlayerState.IDLE);
+        }
         if (metaGame.gameState == MetaGame.GameState.GAMEPLAY || metaGame.gameState == MetaGame.GameState.NIGHT
                 || metaGame.gameState == MetaGame.GameState.VICTORY) {
             if (leftArrow && !player.isAttacking) {
@@ -496,14 +511,14 @@ public class Gladiator extends ApplicationAdapter {
             if (downArrow && !player.isAttacking) {
                 player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
             }
-            if (!downArrow && !upArrow && !leftArrow && !rightArrow && player.state != PlayerEntityImpl.State.STUNNED) {
+            if (!downArrow && !upArrow && !leftArrow && !rightArrow && (player.getState() != PlayerState.STUNNED)) {
                 player.getBody().setLinearVelocity(0, 0);
             }
             if (attackButton) {
                 boolean isAttackingAllowed = metaGame.isRenderingGame() && metaGame.gameState != MetaGame.GameState.NIGHT;
                 if (attackCooldown < 0 && isAttackingAllowed) {
-                    sliceSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0 );
-                    player.setIsAttacking(true);
+                    sliceSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0 );
+                    player.setState(PlayerState.ATTACKING);
                     attackCooldown = ATTACK_COOLDOWN;
                     hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
                     hitBoxSize = new Vector2(10, 10);

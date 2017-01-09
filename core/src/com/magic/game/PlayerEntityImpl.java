@@ -10,10 +10,9 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
-import javafx.scene.paint.Color;
+import com.sun.media.jfxmedia.events.PlayerStateEvent;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static com.magic.game.Gladiator.BOX_TO_WORLD;
@@ -26,7 +25,7 @@ public class PlayerEntityImpl implements Entity {
     float damageCooldown = 0.8f;
     float stunTime = 0.4f;
     float damageTimer;
-    public State state;
+    private PlayerState state;
     boolean isRight, isRunning;
     AnimState animState;
     Animation idle, run, slow, hurt, die, att, victory;
@@ -72,8 +71,7 @@ public class PlayerEntityImpl implements Entity {
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
         this.sprite.setPosition(loc.x, loc.y);
         this.body = body;
-        this.health = 2;
-        state = State.NORMAL;
+        this.health = params.get("maxHealth").intValue();
         isRight = true;
         isRunning = false;
         isAttacking = false;
@@ -84,6 +82,7 @@ public class PlayerEntityImpl implements Entity {
         body.setUserData(this);
         this.params = new HashMap<String, Float>(params);
         this.team = params.get("team").intValue();
+        state = PlayerState.IDLE;
     }
 
     public int getTeam() {
@@ -94,11 +93,8 @@ public class PlayerEntityImpl implements Entity {
         this.params.put("souls", params.get("souls") + 1);
     }
 
-    public void setIsAttacking(boolean isAttacking) {
-        this.isAttacking = isAttacking;
-        if (!isAttacking) {
-            attTimer = 0;
-        }
+    public PlayerState getState() {
+        return state;
     }
 
     public void setIsRight(boolean isRight) {
@@ -121,6 +117,7 @@ public class PlayerEntityImpl implements Entity {
         }
         if (animState == AnimState.HURT) {
             choice = hurt;
+            loop = false;
         }
         if (animState == AnimState.VICTORY) {
             choice = victory;
@@ -147,21 +144,11 @@ public class PlayerEntityImpl implements Entity {
         sprite.setRegion(region);
     }
 
-    public void setIsRunning(boolean isRunning) {
-        if (isRunning) {
-            animState = AnimState.RUN;
-            this.isRunning = true;
-        } else {
-            if (this.isRunning) {
-                slowTimer = slowCooldown;
-            }
-            if (slowTimer > 0) {
-                animState = AnimState.SLOW;
-            } else {
-                animState = AnimState.IDLE;
-            }
-            this.isRunning = false;
+    public void setState(PlayerState state) {
+        if (this.state == PlayerState.MOVING && state != PlayerState.MOVING) {
+            slowTimer = slowCooldown;
         }
+        this.state = state;
     }
 
     public int getSouls() {
@@ -181,32 +168,47 @@ public class PlayerEntityImpl implements Entity {
             float speed = limitVel.len();
             float maxSpeed = params.get("maxSpeed");
             if (speed > maxSpeed ) {
-                if (state == State.STUNNED) {
+                if (state == PlayerState.STUNNED) {
                     body.setLinearVelocity(limitVel.nor().scl(MAX_ENTITY_SPEED * 3));
                 } else {
                     body.setLinearVelocity(limitVel.nor().scl(maxSpeed));
                 }
             }
         }
-        if (isAttacking) {
+
+        if (state == PlayerState.ATTACKING) {
             animState = AnimState.ATT;
+        } else {
+            attTimer = 0;
+        }
+        if (state == PlayerState.IDLE) {
+            animState = AnimState.IDLE;
+        }
+        if (state == PlayerState.MOVING) {
+            animState = AnimState.RUN;
         }
         if (damageTimer >= 0) {
             damageTimer = damageTimer - Gdx.graphics.getDeltaTime();
             animState = AnimState.HURT;
-        }
-        if (damageTimer < stunTime) {
-            state = State.NORMAL;
-            if (damageTimer > 0) {
+            if (damageTimer < stunTime) {
                 animState = AnimState.SLOW;
             }
+            state = PlayerState.STUNNED;
+        } else {
+            if (state == PlayerState.STUNNED) {
+                state = PlayerState.IDLE;
+            }
+        }
+        if (slowTimer >= 0) {
+            animState = AnimState.SLOW;
+            slowTimer = slowTimer - Gdx.graphics.getDeltaTime();
         }
         if (!isRunning && isVictory) {
             animState = AnimState.VICTORY;
         }
-        slowTimer = slowTimer - Gdx.graphics.getDeltaTime();
         if (health <= 0) {
             animState = AnimState.DIE;
+            state = PlayerState.DEAD;
         }
         setAnimation(time);
     }
@@ -228,8 +230,7 @@ public class PlayerEntityImpl implements Entity {
 
     public boolean takeDamage(int amount) {
         if (damageTimer < 0) {
-            thumpSound.play(0.8f, MathUtils.random(0.5f, 2.0f), 0);
-            state = State.STUNNED;
+            thumpSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
             health = health - amount;
             damageTimer = damageCooldown;
             return true;
@@ -271,10 +272,5 @@ public class PlayerEntityImpl implements Entity {
         DIE,
         ATT,
         VICTORY
-    }
-
-    public enum State {
-        STUNNED,
-        NORMAL
     }
 }
