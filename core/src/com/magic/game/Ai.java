@@ -98,15 +98,17 @@ public class Ai {
         }
 
         if (intendedState == PlayerState.ATTACKING) {
-            if (attackTimer < 0) {
-                attackTimer = attackTimeMax;
-                Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
-                playerEntity.setIsRight(dir.x > 0);
-            } else {
-                if (attackTimer > attackHitEndTime && attackTimer < attackHitStartTime) {
-                    handleHitting(target);
-                    playerEntity.setState(PlayerState.ATTACKING);
-                    gladiator.drawRect(hitBox);
+            if (playerEntity.getState() == PlayerState.MOVING || playerEntity.getState() == PlayerState.IDLE) {
+                if (attackTimer < 0) {
+                    attackTimer = attackTimeMax;
+                    Vector2 dir = target.getPos().cpy().sub(playerEntity.getPos()).nor().scl((weaponSize));
+                    playerEntity.setIsRight(dir.x > 0);
+                } else {
+                    if (attackTimer > attackHitEndTime && attackTimer < attackHitStartTime) {
+                        handleHitting(target);
+                        playerEntity.setState(PlayerState.ATTACKING);
+                        gladiator.drawRect(hitBox);
+                    }
                 }
             }
         } else {

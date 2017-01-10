@@ -19,6 +19,9 @@ import static com.magic.game.Gladiator.BOX_TO_WORLD;
 import static com.magic.game.Gladiator.MAX_ENTITY_SPEED;
 
 public class PlayerEntityImpl implements Entity {
+
+    public static final float ATTACK_COOLDOWN = 0.6f;
+
     Sprite sprite;
     Body body;
     int health;
@@ -34,12 +37,12 @@ public class PlayerEntityImpl implements Entity {
     float slowCooldown = 0.14f;
     float slowTimer;
     float dieTimer, attTimer;
-    public boolean isAttacking;
     Vector2 lastPos;
     Texture shadow;
     Sound thumpSound;
     boolean isVictory;
     int team;
+    float attackCooldown = 0;
 
     Map<String, Float> params;
 
@@ -74,7 +77,6 @@ public class PlayerEntityImpl implements Entity {
         this.health = params.get("maxHealth").intValue();
         isRight = true;
         isRunning = false;
-        isAttacking = false;
         isVictory = false;
         dieTimer = 0;
         attTimer = 0;
@@ -83,6 +85,7 @@ public class PlayerEntityImpl implements Entity {
         this.params = new HashMap<String, Float>(params);
         this.team = params.get("team").intValue();
         state = PlayerState.IDLE;
+        attackCooldown = 0;
     }
 
     public int getTeam() {
@@ -148,6 +151,9 @@ public class PlayerEntityImpl implements Entity {
         if (this.state == PlayerState.MOVING && state != PlayerState.MOVING) {
             slowTimer = slowCooldown;
         }
+        if (state == PlayerState.ATTACKING) {
+            attackCooldown = ATTACK_COOLDOWN;
+        }
         this.state = state;
     }
 
@@ -159,7 +165,15 @@ public class PlayerEntityImpl implements Entity {
         params.put("souls", Integer.valueOf(value).floatValue());
     }
 
+    public boolean isAttackHurting() {
+        return attackCooldown > (ATTACK_COOLDOWN / 2f);
+    }
+
     public void update(float time) {
+        attackCooldown = attackCooldown - Gdx.graphics.getDeltaTime();
+        if (attackCooldown < 0 && state == PlayerState.ATTACKING) {
+            state = PlayerState.IDLE;
+        }
         if (this.body != null) {
             Vector2 newPos = body.getPosition().cpy().scl(BOX_TO_WORLD);
             Vector2 offset = new Vector2(sprite.getWidth(), sprite.getHeight()).scl(0.5f);

@@ -111,7 +111,7 @@ public class MetaGame {
 
         if (currentTexture != null) {
             batch.draw(currentTexture, pos.x, pos.y);
-            if (isSelectScreen()) {
+            if (gameState == GameState.LOSE) {
                 Vector2 selectPos = pos.cpy().add(new Vector2(60, 16));
                 if (!isPlayAgainSelected) {
                     selectPos = pos.cpy().add(new Vector2(60, 54));

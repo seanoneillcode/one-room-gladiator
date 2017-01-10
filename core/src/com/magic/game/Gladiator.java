@@ -24,7 +24,6 @@ public class Gladiator extends ApplicationAdapter {
     public static final float BOX_TO_WORLD = 10f;
     public static final float WORLD_TO_BOX = 0.1f;
     public static final float MAX_ENTITY_SPEED = 8.0f;
-    public static final float ATTACK_COOLDOWN = 0.8f;
     public static final float ATTACK_FORCE = 40f;
     public static final float PICKUP_RADIUS = 3f;
     public static final float DARK_SCREEN_TIMER = 2.0f;
@@ -48,7 +47,6 @@ public class Gladiator extends ApplicationAdapter {
     List<Ai> ais;
     List<Entity> pickups;
 
-    float attackCooldown = 0;
     Rectangle hitbox;
     Vector2 hitBoxOffset = new Vector2();
     Vector2 hitBoxSize = new Vector2(20, 20);
@@ -107,17 +105,17 @@ public class Gladiator extends ApplicationAdapter {
         //bassMusic.loop(0.2f);
         playerParams = new HashMap<String, Float>();
         playerParams.put("maxSpeed", 5.0f);
-        playerParams.put("maxHealth", 30.0f);
+        playerParams.put("maxHealth", 1.0f);
         playerParams.put("damage", 1.0f);
         playerParams.put("souls", 0f);
-        playerParams.put("team", -1f);
+        playerParams.put("team", 0f);
 
         resetGame();
 	}
 
     public void resetGame() {
         cleanGameArea();
-        addWave(1, 0);
+        addWave(2, 0);
     }
 
     public void cleanGameArea() {
@@ -137,13 +135,12 @@ public class Gladiator extends ApplicationAdapter {
         player.getSprite().setColor(1.0f, 0.1f, 0.1f, 1.0f);
         ents.add(player);
         elapsedTime = 0;
-        attackCooldown = 0;
         isVictory = false;
     }
 
     private void addWave(int size, int numTeams) {
         if (numTeams == 0) {
-            for (int i = 0; i < size; i++) {
+            for (int i = 1; i < size; i++) {
                 addEnemy(i, MathUtils.random(360f));
             }
         } else {
@@ -151,15 +148,20 @@ public class Gladiator extends ApplicationAdapter {
             float startColor = 0;
             for (int i = 0; i < numTeams; i++) {
                 teamColors.add(startColor);
-                startColor = startColor + (360.0f / numTeams);
+                startColor = startColor + MathUtils.random(360.0f);
             }
+
             int membersPerTeam = size / numTeams;
             for (int i = 0, team = 0; i < size; i++) {
                 if (i >= membersPerTeam) {
                     team++;
                     membersPerTeam = membersPerTeam + membersPerTeam;
                 }
-                addEnemy(team, teamColors.get(team));
+                if (i == 0) {
+                    addEnemy(team, 0);
+                } else {
+                    addEnemy(team, teamColors.get(team));
+                }
             }
         }
 
@@ -168,7 +170,7 @@ public class Gladiator extends ApplicationAdapter {
     private void addEnemy(int team, float hue) {
         Map<String, Float> params = new HashMap<String, Float>();
         params.put("maxSpeed", 4.0f);
-        params.put("maxHealth", 20.0f);
+        params.put("maxHealth", 1.0f);
         params.put("damage", 1.0f);
         params.put("souls", 0f);
         params.put("team", (float)team);
@@ -323,7 +325,7 @@ public class Gladiator extends ApplicationAdapter {
                 nextState = MetaGame.GameState.LOSE;
             }
             handleUpdate();
-            if (showDebug && attackCooldown > (ATTACK_COOLDOWN / 2.0f)) {
+            if (showDebug && player.isAttackHurting()) {
                 batch.draw(hitboxImage, hitbox.getX(), hitbox.getY(), hitbox.getWidth(), hitbox.height);
             }
 
@@ -400,7 +402,7 @@ public class Gladiator extends ApplicationAdapter {
                 player.getPos().x + hitBoxOffset.x,
                 player.getPos().y + hitBoxOffset.y,
                 hitBoxSize.x, hitBoxSize.y);
-        if (attackCooldown > (ATTACK_COOLDOWN / 2f)) {
+        if (player.isAttackHurting()) {
             for (Entity ent : ents) {
                 if (ent != player && ent.getHealth() > 0) {
                     if (Intersector.overlaps(getEntityHitBox(ent), hitbox)) {
@@ -468,9 +470,6 @@ public class Gladiator extends ApplicationAdapter {
             debugCoolDown = 0.2f;
             showDebug = !showDebug;
         }
-        if (player.getHealth() < 1) {
-            return;
-        }
 
         boolean leftArrow = Gdx.input.isKeyPressed(Input.Keys.LEFT);
         boolean rightArrow = Gdx.input.isKeyPressed(Input.Keys.RIGHT);
@@ -489,37 +488,41 @@ public class Gladiator extends ApplicationAdapter {
             rightArrow = false;
         }
         Vector2 playerPos = player.getPos();
-        attackCooldown = attackCooldown - delta;
-        if (leftArrow || rightArrow || upArrow || downArrow && (player.getState() != PlayerState.STUNNED)) {
-            player.setState(PlayerState.MOVING);
-        } else {
-            player.setState(PlayerState.IDLE);
-        }
+
         if (metaGame.gameState == MetaGame.GameState.GAMEPLAY || metaGame.gameState == MetaGame.GameState.NIGHT
                 || metaGame.gameState == MetaGame.GameState.VICTORY) {
-            if (leftArrow && !player.isAttacking) {
-                player.getBody().applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
-                player.setIsRight(false);
+            if (player.getState() == PlayerState.IDLE || player.getState() == PlayerState.MOVING) {
+                if (leftArrow) {
+                    player.getBody().applyLinearImpulse(-playerMove, 0, playerPos.x,playerPos.y, true);
+                    player.setIsRight(false);
+                    player.setState(PlayerState.MOVING);
+                }
+                if (rightArrow) {
+                    player.getBody().applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
+                    player.setIsRight(true);
+                    player.setState(PlayerState.MOVING);
+                }
+                if (upArrow) {
+                    player.getBody().applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
+                    player.setState(PlayerState.MOVING);
+                }
+                if (downArrow) {
+                    player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
+                    player.setState(PlayerState.MOVING);
+                }
             }
-            if (rightArrow && !player.isAttacking) {
-                player.getBody().applyLinearImpulse(playerMove, 0, playerPos.x,playerPos.y, true);
-                player.setIsRight(true);
-            }
-            if (upArrow && !player.isAttacking) {
-                player.getBody().applyLinearImpulse(0, playerMove, playerPos.x,playerPos.y, true);
-            }
-            if (downArrow && !player.isAttacking) {
-                player.getBody().applyLinearImpulse(0, -playerMove, playerPos.x,playerPos.y, true);
-            }
+
             if (!downArrow && !upArrow && !leftArrow && !rightArrow && (player.getState() != PlayerState.STUNNED)) {
                 player.getBody().setLinearVelocity(0, 0);
+                if (player.getState() == PlayerState.MOVING) {
+                    player.setState(PlayerState.IDLE);
+                }
             }
             if (attackButton) {
                 boolean isAttackingAllowed = metaGame.isRenderingGame() && metaGame.gameState != MetaGame.GameState.NIGHT;
-                if (attackCooldown < 0 && isAttackingAllowed) {
+                if (player.attackCooldown < 0 && isAttackingAllowed) {
                     sliceSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0 );
                     player.setState(PlayerState.ATTACKING);
-                    attackCooldown = ATTACK_COOLDOWN;
                     hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
                     hitBoxSize = new Vector2(10, 10);
                     if (player.isRight) {
