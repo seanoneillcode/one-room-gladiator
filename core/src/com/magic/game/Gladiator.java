@@ -105,7 +105,7 @@ public class Gladiator extends ApplicationAdapter {
         //bassMusic.loop(0.2f);
         playerParams = new HashMap<String, Float>();
         playerParams.put("maxSpeed", 5.0f);
-        playerParams.put("maxHealth", 1.0f);
+        playerParams.put("maxHealth", 8.0f);
         playerParams.put("damage", 1.0f);
         playerParams.put("souls", 0f);
         playerParams.put("team", 0f);
@@ -115,7 +115,7 @@ public class Gladiator extends ApplicationAdapter {
 
     public void resetGame() {
         cleanGameArea();
-        addWave(2, 0);
+        addWave(12, 3);
     }
 
     public void cleanGameArea() {
@@ -130,8 +130,7 @@ public class Gladiator extends ApplicationAdapter {
         ents = new ArrayList<Entity>();
         ais = new ArrayList<Ai>();
         pickups = new ArrayList<Entity>();
-        player = PlayerEntity(new Vector2(300, 120), (player == null ? playerParams : player.params));
-        player.setHealth(player.params.get("maxHealth").intValue());
+        player = PlayerEntity(new Vector2(300, 120), (player == null ? playerParams : player.params), javafx.scene.paint.Color.color(1.0, 0.0, 0.0));
         player.getSprite().setColor(1.0f, 0.1f, 0.1f, 1.0f);
         ents.add(player);
         elapsedTime = 0;
@@ -170,13 +169,13 @@ public class Gladiator extends ApplicationAdapter {
     private void addEnemy(int team, float hue) {
         Map<String, Float> params = new HashMap<String, Float>();
         params.put("maxSpeed", 4.0f);
-        params.put("maxHealth", 1.0f);
+        params.put("maxHealth", 6.0f);
         params.put("damage", 1.0f);
         params.put("souls", 0f);
         params.put("team", (float)team);
 
-        javafx.scene.paint.Color color = javafx.scene.paint.Color.hsb(hue, MathUtils.random(0.8f, 1.0f), MathUtils.random(0.2f, 1.0f));
-        PlayerEntityImpl ent = PlayerEntity(getRandomPosition(), params);
+        javafx.scene.paint.Color color = javafx.scene.paint.Color.hsb(hue, 1.0f, 1.0f);
+        PlayerEntityImpl ent = PlayerEntity(getRandomPosition(), params, color);
         ent.getSprite().setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
         ents.add(ent);
         ais.add(new Ai(ent));
@@ -195,7 +194,7 @@ public class Gladiator extends ApplicationAdapter {
         batch.setProjectionMatrix(cam.combined);
     }
 
-	public PlayerEntityImpl PlayerEntity(Vector2 pos, Map<String, Float> params) {
+	public PlayerEntityImpl PlayerEntity(Vector2 pos, Map<String, Float> params, javafx.scene.paint.Color color) {
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(pos.x * WORLD_TO_BOX, pos.y * WORLD_TO_BOX);
@@ -210,7 +209,7 @@ public class Gladiator extends ApplicationAdapter {
         fixtureDef.friction = 0;
         Fixture fixture = body.createFixture(fixtureDef);
         shape.dispose();
-        return new PlayerEntityImpl(pos, body, params);
+        return new PlayerEntityImpl(pos, body, params, color);
     }
 
     public Entity buildPickup(Vector2 pos) {

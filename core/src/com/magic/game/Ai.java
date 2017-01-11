@@ -64,7 +64,7 @@ public class Ai {
         if (target == null){
             intendedState = PlayerState.IDLE;
         } else {
-            if (isTarget(target) && target.getPos().dst(playerEntity.getPos()) < attackRange) {
+            if (isTarget(target) && target.getPos().dst(playerEntity.getPos()) < attackRange - 2) {
                 if (Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
                     intendedState = PlayerState.ATTACKING;
                 } else {
@@ -86,9 +86,9 @@ public class Ai {
             Vector2 targetPos = target.getPos().cpy();
             if (target instanceof PlayerEntityImpl) {
                 if (targetPos.x < playerEntity.getPos().x) {
-                    targetPos.x = targetPos.x + (2 * Gladiator.ENTITY_RADIUS);
+                    targetPos.x = targetPos.x + (1.6f * Gladiator.ENTITY_RADIUS);
                 } else {
-                    targetPos.x = targetPos.x - (2 * Gladiator.ENTITY_RADIUS);
+                    targetPos.x = targetPos.x - (1.6f * Gladiator.ENTITY_RADIUS);
                 }
             }
             Vector2 dir = targetPos.sub(playerEntity.getPos()).nor().scl(speed);

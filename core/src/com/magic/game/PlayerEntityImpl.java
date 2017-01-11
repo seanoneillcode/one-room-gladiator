@@ -18,6 +18,8 @@ import java.util.Map;
 import static com.magic.game.Gladiator.BOX_TO_WORLD;
 import static com.magic.game.Gladiator.MAX_ENTITY_SPEED;
 
+import javafx.scene.paint.Color;
+
 public class PlayerEntityImpl implements Entity {
 
     public static final float ATTACK_COOLDOWN = 0.6f;
@@ -42,11 +44,12 @@ public class PlayerEntityImpl implements Entity {
     Sound thumpSound;
     boolean isVictory;
     int team;
+    Color color;
     float attackCooldown = 0;
 
     Map<String, Float> params;
 
-    public PlayerEntityImpl(Vector2 pos, Body body, Map<String, Float> params) {
+    public PlayerEntityImpl(Vector2 pos, Body body, Map<String, Float> params, Color color) {
         animState = AnimState.IDLE;
         this.sprite = new Sprite();
         sprite.setSize(imageWidth, imageHeight);
@@ -68,7 +71,7 @@ public class PlayerEntityImpl implements Entity {
         TextureRegion[][] attRegions = TextureRegion.split(new Texture("player-attack.png"), imageWidth, imageHeight);
         att = new Animation(1/30f, attRegions[0]);
         setAnimation(0);
-
+        this.color = color;
         thumpSound = Gdx.audio.newSound(Gdx.files.internal("thump-sound.wav"));
 
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
@@ -225,6 +228,10 @@ public class PlayerEntityImpl implements Entity {
             state = PlayerState.DEAD;
         }
         setAnimation(time);
+        int maxHealth = params.get("maxHealth").intValue();
+        float value = MathUtils.clamp(((float) health / (float) maxHealth) * 1.2f, 0f, 1.0f);
+        Color midColor = color.deriveColor(0, 1.0f, value, 1.0f);
+        getSprite().setColor((float)midColor.getRed(), (float)midColor.getGreen(), (float)midColor.getBlue(), 1.0f);
     }
 
     @Override
