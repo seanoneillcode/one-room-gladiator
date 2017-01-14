@@ -172,8 +172,11 @@ public class MetaGame {
     }
 
     public void updateGamestate(Gladiator game) {
+        if (game.nextState != null) {
+            return;
+        }
         if (gameState == GameState.CONTROLS) {
-            game.bassMusic.loop(0.8f);
+            game.bassMusic.loop(SoundPlayer.getMusicVolume());
             gameState = GameState.IDEA;
             return;
         }
@@ -224,7 +227,7 @@ public class MetaGame {
             game.nextState = GameState.NIGHT;
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
-            game.trebleMusic.loop(0.6f);
+            game.trebleMusic.loop(SoundPlayer.getMusicVolume());
             game.bassMusic.stop();
             return;
         }

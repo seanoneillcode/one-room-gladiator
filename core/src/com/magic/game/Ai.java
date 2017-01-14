@@ -61,7 +61,7 @@ public class Ai {
         }
         if (playerEntity.health <= 0) {
             if (playerEntity.getState() != PlayerState.DEAD) {
-                screamSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
+                screamSound.play(SoundPlayer.getSfxVolume(this.playerEntity.getPos()), MathUtils.random(0.5f, 2.0f), 0);
             }
             playerEntity.update(time);
             return;
@@ -130,7 +130,7 @@ public class Ai {
 
     private void handleHitting(Entity target) {
         if (!sliceSoundPlaying) {
-            sliceSound.play(0.4f, MathUtils.random(0.5f, 2.0f), 0);
+            sliceSound.play(SoundPlayer.getSfxVolume(this.playerEntity.getPos()), MathUtils.random(0.5f, 2.0f), 0);
             sliceSoundPlaying = true;
         }
         Rectangle targetBox = new Rectangle(target.getPos().x - Gladiator.ENTITY_RADIUS,

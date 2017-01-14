@@ -8,10 +8,8 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.physics.box2d.*;
-import javafx.scene.paint.*;
 
 import java.util.*;
 
@@ -137,6 +135,8 @@ public class Gladiator extends ApplicationAdapter {
         int[] everyone = new int [] {200};
         hitSquadSize = 4;
 
+        int[] testWave = new int[] {2, 2, 2, 2, 2, 2};
+
         addWave(everyone);
     }
 
@@ -155,6 +155,7 @@ public class Gladiator extends ApplicationAdapter {
         player = PlayerEntity(new Vector2(300, 120), (player == null ? playerParams : player.params), javafx.scene.paint.Color.color(1.0, 0.0, 0.0));
         player.getSprite().setColor(1.0f, 0.1f, 0.1f, 1.0f);
         ents.add(player);
+        SoundPlayer.setPlayer(player);
         elapsedTime = 0;
         isVictory = false;
     }
@@ -538,7 +539,7 @@ public class Gladiator extends ApplicationAdapter {
             if (attackButton) {
                 boolean isAttackingAllowed = metaGame.isRenderingGame() && metaGame.gameState != MetaGame.GameState.NIGHT;
                 if (player.attackCooldown < 0 && isAttackingAllowed) {
-                    sliceSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0 );
+                    sliceSound.play(SoundPlayer.getSfxVolume(player.getPos()), MathUtils.random(0.5f, 2.0f), 0 );
                     player.setState(PlayerState.ATTACKING);
                     hitBoxOffset = new Vector2(-ENTITY_RADIUS, -ENTITY_RADIUS);
                     hitBoxSize = new Vector2(10, 10);
@@ -562,7 +563,7 @@ public class Gladiator extends ApplicationAdapter {
                 fadeDirectionOut = true;
                 nextState = MetaGame.GameState.PLAYAGAIN;
                 trebleMusic.stop();
-                bassMusic.loop(0.8f);
+                bassMusic.loop(SoundPlayer.getMusicVolume());
             }
             if (playerPos.dst2(talkPos) < 900) {
                 buttonTimer = buttonCooldown;

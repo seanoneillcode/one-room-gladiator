@@ -251,7 +251,7 @@ public class PlayerEntityImpl implements Entity {
 
     public boolean takeDamage(int amount) {
         if (damageTimer < 0) {
-            thumpSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
+            thumpSound.play(SoundPlayer.getSfxVolume(this.getPos()), MathUtils.random(0.5f, 2.0f), 0);
             health = health - amount;
             damageTimer = damageCooldown;
             return true;
