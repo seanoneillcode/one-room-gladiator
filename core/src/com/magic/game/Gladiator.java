@@ -64,6 +64,8 @@ public class Gladiator extends ApplicationAdapter {
     boolean fadeDirectionOut = true;
     MetaGame.GameState nextState;
     Map<String, Float> playerParams;
+    List<Ai> hitSquad;
+    int hitSquadSize = 0;
 
 	@Override
 	public void create () {
@@ -73,6 +75,7 @@ public class Gladiator extends ApplicationAdapter {
         debugRenderer = new Box2DDebugRenderer();
 		batch = new SpriteBatch();
         metaGame = new MetaGame();
+        hitSquad = new ArrayList<Ai>();
 
 		background = new Texture("background.png");
         backgroundNight = new Texture("background-night.png");
@@ -100,7 +103,7 @@ public class Gladiator extends ApplicationAdapter {
 
         sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
         loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound.wav"));
-        bassMusic = Gdx.audio.newSound(Gdx.files.internal("kill-synth.ogg"));
+        bassMusic = Gdx.audio.newSound(Gdx.files.internal("dance-dance.ogg"));
         trebleMusic = Gdx.audio.newSound(Gdx.files.internal("synth-runner.ogg"));
         //bassMusic.loop(0.2f);
         playerParams = new HashMap<String, Float>();
@@ -115,7 +118,26 @@ public class Gladiator extends ApplicationAdapter {
 
     public void resetGame() {
         cleanGameArea();
-        addWave(12, 3);
+
+        int[] mediumDiffsmallSize = new int[] {2, 4};
+        int[] mediumDiffMediumSize = new int[] {3, 5, 7};
+        int[] mediumDiffLargeSize = new int[] {0, 4, 4, 4, 8, 10};
+        int[] mediumDiffExLargeSize = new int[] {0, 8, 8, 8, 16, 20};
+        hitSquadSize = 2;
+
+        int[] hardDiffsmallSize = new int[] {2, 5};
+        int[] hardDiffmediumSize = new int[] {2, 4, 9};
+        int[] hardDiffLargeSize = new int[] {1, 3, 4, 4, 9, 12};
+        int[] hardDiffExLargeSize = new int[] {2, 6, 8, 8, 18, 24};
+        hitSquadSize = 0;
+
+        int[] mediumMelee = new int [] {80};
+        int[] largeMelee = new int [] {120};
+        int[] exlargeMelee = new int [] {160};
+        int[] everyone = new int [] {200};
+        hitSquadSize = 4;
+
+        addWave(everyone);
     }
 
     public void cleanGameArea() {
@@ -137,33 +159,21 @@ public class Gladiator extends ApplicationAdapter {
         isVictory = false;
     }
 
-    private void addWave(int size, int numTeams) {
-        if (numTeams == 0) {
-            for (int i = 1; i < size; i++) {
+    private void addWave(int[] teams) {
+        if (teams.length == 1) {
+            for (int i = 1; i < teams[0]; i++) {
                 addEnemy(i, MathUtils.random(360f));
             }
         } else {
-            List<Float> teamColors = new ArrayList<Float>();
             float startColor = 0;
-            for (int i = 0; i < numTeams; i++) {
-                teamColors.add(startColor);
-                startColor = startColor + MathUtils.random(360.0f);
-            }
-
-            int membersPerTeam = size / numTeams;
-            for (int i = 0, team = 0; i < size; i++) {
-                if (i >= membersPerTeam) {
-                    team++;
-                    membersPerTeam = membersPerTeam + membersPerTeam;
+            float gap = 360.0f / teams.length;
+            for (int i = 0; i < teams.length; i++) {
+                for (int j = 0; j < teams[i]; j++) {
+                    addEnemy(i, startColor);
                 }
-                if (i == 0) {
-                    addEnemy(team, 0);
-                } else {
-                    addEnemy(team, teamColors.get(team));
-                }
+                startColor = startColor + MathUtils.random(gap / 2.0f, gap);
             }
         }
-
     }
 
     private void addEnemy(int team, float hue) {
@@ -420,7 +430,15 @@ public class Gladiator extends ApplicationAdapter {
             ai.update(this, elapsedTime, ents);
             if (ai.playerEntity.getState() != PlayerState.DEAD && ai.playerEntity.getTeam() != player.getTeam()) {
                 aliveAi = true;
+                if (hitSquad.size() < hitSquadSize) {
+                    hitSquad.add(ai);
+                }
             }
+        }
+        Iterator<Ai> ais = hitSquad.iterator();
+        while (ais.hasNext()) {
+            Ai ai = ais.next();
+            ai.target = player;
         }
         if (!aliveAi && (metaGame.gameState == MetaGame.GameState.GAMEPLAY)) {
             metaGame.setState(MetaGame.GameState.VICTORY);
@@ -544,7 +562,7 @@ public class Gladiator extends ApplicationAdapter {
                 fadeDirectionOut = true;
                 nextState = MetaGame.GameState.PLAYAGAIN;
                 trebleMusic.stop();
-                bassMusic.loop(0.1f);
+                bassMusic.loop(0.8f);
             }
             if (playerPos.dst2(talkPos) < 900) {
                 buttonTimer = buttonCooldown;

@@ -173,13 +173,14 @@ public class MetaGame {
 
     public void updateGamestate(Gladiator game) {
         if (gameState == GameState.CONTROLS) {
+            game.bassMusic.loop(0.8f);
             gameState = GameState.IDEA;
             return;
         }
         if (gameState == GameState.IDEA) {
             game.resetPlayerPosition();
             gameState = GameState.COUNTDOWN;
-            game.bassMusic.loop(0.1f);
+
             return;
         }
         if (gameState == GameState.LOSE) {
@@ -223,12 +224,13 @@ public class MetaGame {
             game.nextState = GameState.NIGHT;
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
-            game.trebleMusic.loop(0.2f);
+            game.trebleMusic.loop(0.6f);
             game.bassMusic.stop();
             return;
         }
         if (gameState == GameState.ADVICE) {
             gameState = GameState.NIGHT;
+            return;
         }
     }
 

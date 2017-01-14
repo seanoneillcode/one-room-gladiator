@@ -17,7 +17,7 @@ public class Ai {
     float attackHitStartTime = 0.6f;
     float attackHitEndTime = 0.4f;
     float weaponSize = 12f;
-    float attackRange = 32f;
+    Entity target;
 
     Rectangle hitBox;
     Sound sliceSound, screamSound;
@@ -52,7 +52,13 @@ public class Ai {
 
     public void update(Gladiator gladiator, float time, List<Entity> ents) {
         attackTimer = attackTimer - Gdx.graphics.getDeltaTime();
-        Entity target = getNearestEntity(ents);
+        if (target == null || playerEntity.getState() == PlayerState.STUNNED) {
+            target = getNearestEntity(ents);
+        } else {
+            if (target.getState() == PlayerState.DEAD) {
+                target = getNearestEntity(ents);
+            }
+        }
         if (playerEntity.health <= 0) {
             if (playerEntity.getState() != PlayerState.DEAD) {
                 screamSound.play(0.6f, MathUtils.random(0.5f, 2.0f), 0);
@@ -64,8 +70,8 @@ public class Ai {
         if (target == null){
             intendedState = PlayerState.IDLE;
         } else {
-            if (isTarget(target) && target.getPos().dst(playerEntity.getPos()) < attackRange - 2) {
-                if (Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
+            if (isTarget(target) && Math.abs(target.getPos().y - playerEntity.getPos().y) < 12) {
+                if (Math.abs(target.getPos().x - playerEntity.getPos().x) < 24) {
                     intendedState = PlayerState.ATTACKING;
                 } else {
                     intendedState = PlayerState.MOVING;
@@ -86,9 +92,9 @@ public class Ai {
             Vector2 targetPos = target.getPos().cpy();
             if (target instanceof PlayerEntityImpl) {
                 if (targetPos.x < playerEntity.getPos().x) {
-                    targetPos.x = targetPos.x + (1.6f * Gladiator.ENTITY_RADIUS);
+                    targetPos.x = targetPos.x + (2f * Gladiator.ENTITY_RADIUS);
                 } else {
-                    targetPos.x = targetPos.x - (1.6f * Gladiator.ENTITY_RADIUS);
+                    targetPos.x = targetPos.x - (2f * Gladiator.ENTITY_RADIUS);
                 }
             }
             Vector2 dir = targetPos.sub(playerEntity.getPos()).nor().scl(speed);
