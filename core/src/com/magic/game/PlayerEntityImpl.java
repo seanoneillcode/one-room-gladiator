@@ -276,6 +276,11 @@ public class PlayerEntityImpl implements Entity {
     }
 
     @Override
+    public void dispose() {
+        this.sprite.getTexture().dispose();
+    }
+
+    @Override
     public void draw(SpriteBatch batch) {
         batch.draw(this.shadow, this.sprite.getX(), this.sprite.getY());
     }

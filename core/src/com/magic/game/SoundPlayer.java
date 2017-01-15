@@ -26,6 +26,6 @@ class SoundPlayer {
     }
 
     static float getMusicVolume() {
-        return GLOBAL_MUSIC_LEVEL;
+        return 0.0f;//GLOBAL_MUSIC_LEVEL;
     }
 }

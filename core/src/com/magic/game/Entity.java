@@ -16,4 +16,5 @@ public interface Entity {
     void update(float elapsedTime);
     void destroyBody();
     PlayerState getState();
+    void dispose();
 }

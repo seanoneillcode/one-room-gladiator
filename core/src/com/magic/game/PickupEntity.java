@@ -26,7 +26,8 @@ public class PickupEntity implements Entity {
 
     public PickupEntity(Vector2 pos, Body body) {
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
-        TextureRegion[][] idleRegions = TextureRegion.split(new Texture("coin.png"), imageWidth, imageHeight);
+        Texture tex = new Texture("coin.png");
+        TextureRegion[][] idleRegions = TextureRegion.split(tex, imageWidth, imageHeight);
         idle = new Animation(1/2f, idleRegions[0]);
         this.sprite = new Sprite();
         this.sprite.setPosition(loc.x, loc.y);
@@ -64,6 +65,11 @@ public class PickupEntity implements Entity {
 
     public PlayerState getState() {
         return state;
+    }
+
+    @Override
+    public void dispose() {
+
     }
 
     @Override

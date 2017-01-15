@@ -116,37 +116,25 @@ public class Gladiator extends ApplicationAdapter {
 
     public void resetGame() {
         cleanGameArea();
-
-        int[] mediumDiffsmallSize = new int[] {2, 4};
-        int[] mediumDiffMediumSize = new int[] {3, 5, 7};
-        int[] mediumDiffLargeSize = new int[] {0, 4, 4, 4, 8, 10};
-        int[] mediumDiffExLargeSize = new int[] {0, 8, 8, 8, 16, 20};
         hitSquadSize = 2;
-
-        int[] hardDiffsmallSize = new int[] {2, 5};
-        int[] hardDiffmediumSize = new int[] {2, 4, 9};
-        int[] hardDiffLargeSize = new int[] {1, 3, 4, 4, 9, 12};
-        int[] hardDiffExLargeSize = new int[] {2, 6, 8, 8, 18, 24};
-        hitSquadSize = 0;
-
-        int[] mediumMelee = new int [] {80};
-        int[] largeMelee = new int [] {120};
-        int[] exlargeMelee = new int [] {160};
-        int[] everyone = new int [] {200};
-        hitSquadSize = 4;
-
-        int[] testWave = new int[] {2, 2, 2, 2, 2, 2};
-
-        addWave(everyone);
+        int[] wave = metaGame.getWave();
+        addWave(wave);
     }
 
     public void cleanGameArea() {
         if (ents != null) {
             for (Entity ent : ents) {
+                ent.dispose();
                 if (ent.getBody() != null) {
                     world.destroyBody(ent.getBody());
                     ent.destroyBody();
+
                 }
+            }
+        }
+        if (ais != null) {
+            for (Ai ai : ais) {
+                ai.dispose();
             }
         }
         ents = new ArrayList<Entity>();
@@ -265,8 +253,8 @@ public class Gladiator extends ApplicationAdapter {
 	@Override
 	public void render () {
         if (metaGame.gameState == MetaGame.GameState.PLAYAGAIN) {
-            resetGame();
             metaGame.playAgain();
+            resetGame();
         }
         metaGame.update(this);
         buttonTimer = buttonTimer - Gdx.graphics.getDeltaTime();
@@ -276,7 +264,10 @@ public class Gladiator extends ApplicationAdapter {
             cam.position.set(player.getPos().x, player.getPos().y, 0);
             cam.update();
             batch.setProjectionMatrix(cam.combined);
+            batch.begin();
             metaGame.render(batch, player.getPos().sub(screenWidth * 0.5f, screenHeight * 0.5f));
+            handleNext();
+            batch.end();
             return;
         }
 
@@ -355,6 +346,44 @@ public class Gladiator extends ApplicationAdapter {
                 batch.draw(talkMessage, player.getPos().x - 50, player.getPos().y  + 70);
             }
         }
+        handleNext();
+		batch.end();
+
+        if (metaGame.gameState == MetaGame.GameState.COUNTDOWN || metaGame.isSelectScreen()) {
+            for (Entity ent : ents) {
+                ent.update(elapsedTime);
+            }
+            cam.position.set(player.getPos().x, player.getPos().y, 0);
+            cam.update();
+            batch.setProjectionMatrix(cam.combined);
+            batch.begin();
+            metaGame.render(batch, player.getPos().sub(screenWidth * 0.5f, screenHeight * 0.5f));
+            batch.end();
+        }
+
+        if (showDebug) {
+            debugRenderer.render(world, cam.combined.cpy().scl(BOX_TO_WORLD));
+        }
+	}
+
+	@Override
+    public void dispose() {
+        background.dispose();
+        backgroundNight.dispose();
+        hitboxImage.dispose();
+        finishMessage.dispose();
+        sleepMessage.dispose();
+        talkMessage.dispose();
+
+        sliceSound.dispose();
+        loseSound.dispose();
+        bassMusic.dispose();
+        trebleMusic.dispose();
+
+        metaGame.dispose();
+    }
+
+	private void handleNext() {
         if (nextState != null) {
             darkScreenTimer = darkScreenTimer - Gdx.graphics.getDeltaTime();
             if (!fadeDirectionOut) {
@@ -377,22 +406,7 @@ public class Gladiator extends ApplicationAdapter {
                 nextState = null;
             }
         }
-		batch.end();
-
-        if (metaGame.gameState == MetaGame.GameState.COUNTDOWN || metaGame.isSelectScreen()) {
-            for (Entity ent : ents) {
-                ent.update(elapsedTime);
-            }
-            cam.position.set(player.getPos().x, player.getPos().y, 0);
-            cam.update();
-            batch.setProjectionMatrix(cam.combined);
-            metaGame.render(batch, player.getPos().sub(screenWidth * 0.5f, screenHeight * 0.5f));
-        }
-
-        if (showDebug) {
-            debugRenderer.render(world, cam.combined.cpy().scl(BOX_TO_WORLD));
-        }
-	}
+    }
 
     public void drawRect(Rectangle rect) {
         if (showDebug) {
@@ -561,7 +575,8 @@ public class Gladiator extends ApplicationAdapter {
                 buttonTimer = buttonCooldown;
                 darkScreenTimer = DARK_SCREEN_TIMER;
                 fadeDirectionOut = true;
-                nextState = MetaGame.GameState.PLAYAGAIN;
+                metaGame.resetDay();
+                nextState = MetaGame.GameState.PROGRESS;
                 trebleMusic.stop();
                 bassMusic.loop(SoundPlayer.getMusicVolume());
             }

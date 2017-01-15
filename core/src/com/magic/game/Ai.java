@@ -148,4 +148,9 @@ public class Ai {
             }
         }
     }
+
+    public void dispose() {
+        this.sliceSound.dispose();
+        this.screamSound.dispose();
+    }
 }
