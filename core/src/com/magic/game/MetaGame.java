@@ -1,5 +1,6 @@
 package com.magic.game;
 
+import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
@@ -55,13 +56,14 @@ public class MetaGame {
             mediumMelee, mediumDiffsmallSize, sleepWave,
             mediumDiffMediumSize, mediumDiffLargeSize, sleepWave,
             largeMelee, hardDiffsmallSize, sleepWave,
-            hardDiffmediumSize, hardDiffLargeSize
+            hardDiffmediumSize, hardDiffLargeSize, sleepWave,
+            exlargeMelee, hardDiffExLargeSize
     };
 
     int currentWaveIndex;
 
     MetaGame () {
-        gameState = GameState.IDEA;
+        gameState = GameState.CONTROLS;
         controlsTex = new Texture("controls.png");
         ideaTex = new Texture("idea.png");
         winTex = new Texture("you-win.png");
@@ -80,7 +82,7 @@ public class MetaGame {
         countdownAnim = new Animation(1f, idleRegions[0]);
         elapsedTime = 0;
         isPlayAgainSelected = true;
-        FileHandle handle = Gdx.files.internal("MavenPro-regular.ttf");
+        FileHandle handle = Gdx.files.getFileHandle("test-font.ttf", Files.FileType.Internal);
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(handle);
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = 14;
@@ -91,11 +93,6 @@ public class MetaGame {
         backgroundPos = new Vector2();
         currentBackgroundPos = new Vector2();
         currentWaveIndex = 0;
-//        levelWaves = new int[][] {
-//                new int []{0, 1},
-//                new int []{},
-//                new int []{0, 1},
-//        };
     }
 
     public void moveCursor(boolean up) {
@@ -273,7 +270,7 @@ public class MetaGame {
             return;
         }
         if (gameState == GameState.CONTROLS) {
-            game.bassMusic.loop(SoundPlayer.getMusicVolume());
+            game.fastDanceMusic.loop(SoundPlayer.getMusicVolume());
             gameState = GameState.IDEA;
             return;
         }
@@ -326,7 +323,7 @@ public class MetaGame {
             game.nextState = GameState.PROGRESS;
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
-            game.bassMusic.stop();
+            game.fastDanceMusic.stop();
             return;
         }
         if (gameState == GameState.ADVICE) {
@@ -337,8 +334,9 @@ public class MetaGame {
             if (currentWaveIndex < (levelWaves.length - 1)) {
                 if (levelWaves[currentWaveIndex + 1].length == 0) {
                     game.nextState = GameState.NIGHT;
-
+                    game.darkSlowMusic.loop(SoundPlayer.getMusicVolume());
                 } else {
+                    game.fastDanceMusic.loop(SoundPlayer.getMusicVolume());
                     game.nextState = GameState.PLAYAGAIN;
                 }
             } else {
@@ -346,7 +344,6 @@ public class MetaGame {
             }
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
-            game.trebleMusic.loop(SoundPlayer.getMusicVolume());
         }
     }
 

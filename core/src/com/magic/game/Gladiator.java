@@ -52,7 +52,7 @@ public class Gladiator extends ApplicationAdapter {
     MetaGame metaGame;
     Body shopWall, talkWall, bunkWall1, bunkWall2, bunkWall3;
 
-    Sound bassMusic, loseSound, sliceSound, trebleMusic;
+    Sound fastDanceMusic, loseSound, sliceSound, darkSlowMusic;
     Vector2 shopPos, sleepPos, talkPos;
 
     boolean isVictory;
@@ -101,9 +101,9 @@ public class Gladiator extends ApplicationAdapter {
 
         sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound-sml.ogg"));
         loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound-sml.ogg"));
-        bassMusic = Gdx.audio.newSound(Gdx.files.internal("dance-dance.ogg"));
-        trebleMusic = Gdx.audio.newSound(Gdx.files.internal("synth-runner.ogg"));
-        //bassMusic.loop(0.2f);
+        fastDanceMusic = Gdx.audio.newSound(Gdx.files.internal("dance-dance.ogg"));
+        darkSlowMusic = Gdx.audio.newSound(Gdx.files.internal("synth-runner.ogg"));
+        //fastDanceMusic.loop(0.2f);
         playerParams = new HashMap<String, Float>();
         playerParams.put("maxSpeed", 5.0f);
         playerParams.put("maxHealth", 8.0f);
@@ -377,8 +377,8 @@ public class Gladiator extends ApplicationAdapter {
 
         sliceSound.dispose();
         loseSound.dispose();
-        bassMusic.dispose();
-        trebleMusic.dispose();
+        fastDanceMusic.dispose();
+        darkSlowMusic.dispose();
 
         metaGame.dispose();
     }
@@ -566,7 +566,7 @@ public class Gladiator extends ApplicationAdapter {
             }
         }
 
-        if (buttonTimer < 0 && useButton && metaGame.gameState == MetaGame.GameState.NIGHT) {
+        if (buttonTimer < 0 && useButton && metaGame.gameState == MetaGame.GameState.NIGHT && nextState == null) {
             if (playerPos.dst2(shopPos) < 400) {
                 buttonTimer = buttonCooldown;
                 metaGame.setState(MetaGame.GameState.SHOP);
@@ -577,8 +577,7 @@ public class Gladiator extends ApplicationAdapter {
                 fadeDirectionOut = true;
                 metaGame.resetDay();
                 nextState = MetaGame.GameState.PROGRESS;
-                trebleMusic.stop();
-                bassMusic.loop(SoundPlayer.getMusicVolume());
+                darkSlowMusic.stop();
             }
             if (playerPos.dst2(talkPos) < 900) {
                 buttonTimer = buttonCooldown;
@@ -586,11 +585,11 @@ public class Gladiator extends ApplicationAdapter {
                 metaGame.setState(MetaGame.GameState.ADVICE);
             }
         }
-        if (buttonTimer < 0 && useButton) {
+        if (buttonTimer < 0 && useButton && nextState == null) {
             buttonTimer = buttonCooldown;
             metaGame.updateGamestate(this);
         }
-        if (buttonTimer < 0 && (upArrow || downArrow)) {
+        if (buttonTimer < 0 && (upArrow || downArrow) && nextState == null) {
             buttonTimer = buttonCooldown;
             metaGame.moveCursor(upArrow);
         }
