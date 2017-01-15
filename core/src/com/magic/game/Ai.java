@@ -25,8 +25,8 @@ public class Ai {
 
     public Ai(PlayerEntityImpl playerEntity) {
         this.playerEntity = playerEntity;
-        sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
-        screamSound = Gdx.audio.newSound(Gdx.files.internal("scream-sound.wav"));
+        sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound-sml.ogg"));
+        screamSound = Gdx.audio.newSound(Gdx.files.internal("scream-sound-sml.ogg"));
         sliceSoundPlaying = false;
     }
 

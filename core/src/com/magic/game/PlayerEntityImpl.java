@@ -72,7 +72,7 @@ public class PlayerEntityImpl implements Entity {
         att = new Animation(1/30f, attRegions[0]);
         setAnimation(0);
         this.color = color;
-        thumpSound = Gdx.audio.newSound(Gdx.files.internal("thump-sound.wav"));
+        thumpSound = Gdx.audio.newSound(Gdx.files.internal("thump-sound-sml.ogg"));
 
         Vector2 loc = body.getPosition().cpy().scl(BOX_TO_WORLD);
         this.sprite.setPosition(loc.x, loc.y);

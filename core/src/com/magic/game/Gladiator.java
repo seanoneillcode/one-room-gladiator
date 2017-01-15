@@ -99,8 +99,8 @@ public class Gladiator extends ApplicationAdapter {
         hitBoxOffset = new Vector2();
         hitBoxSize = new Vector2(20, 20);
 
-        sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound.wav"));
-        loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound.wav"));
+        sliceSound = Gdx.audio.newSound(Gdx.files.internal("slice-sound-sml.ogg"));
+        loseSound = Gdx.audio.newSound(Gdx.files.internal("lose-sound-sml.ogg"));
         bassMusic = Gdx.audio.newSound(Gdx.files.internal("dance-dance.ogg"));
         trebleMusic = Gdx.audio.newSound(Gdx.files.internal("synth-runner.ogg"));
         //bassMusic.loop(0.2f);
