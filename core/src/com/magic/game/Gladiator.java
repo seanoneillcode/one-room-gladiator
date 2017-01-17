@@ -299,6 +299,12 @@ public class Gladiator extends ApplicationAdapter {
         Collections.sort(ents, new Comparator<Entity>() {
             @Override
             public int compare(Entity o1, Entity o2) {
+                if (o1.getState() == PlayerState.DEAD) {
+                    return -1;
+                }
+                if (o2.getState() == PlayerState.DEAD) {
+                    return 1;
+                }
                 return (int)(o2.getPos().y - o1.getPos().y);
             }
         });

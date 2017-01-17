@@ -66,7 +66,7 @@ public class MetaGame {
         gameState = GameState.CONTROLS;
         controlsTex = new Texture("controls.png");
         ideaTex = new Texture("idea.png");
-        winTex = new Texture("you-win.png");
+        winTex = new Texture("victory-screen.png");
         loseTex = new Texture("you-lose.png");
         selectTex = new Texture("select-box.png");
         shopTex = new Texture("shop-screen.png");
