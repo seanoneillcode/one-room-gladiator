@@ -53,11 +53,13 @@ public class MetaGame {
     int[] everyone = new int [] {200};
 
     int[][] levelWaves = new int[][] {
-            mediumMelee, mediumDiffsmallSize, sleepWave,
-            mediumDiffMediumSize, mediumDiffLargeSize, sleepWave,
-            largeMelee, hardDiffsmallSize, sleepWave,
-            hardDiffmediumSize, hardDiffLargeSize, sleepWave,
-            exlargeMelee, hardDiffExLargeSize
+            mediumDiffsmallSize,
+            mediumMelee
+//            mediumMelee, mediumDiffsmallSize, sleepWave,
+//            mediumDiffMediumSize, mediumDiffLargeSize, sleepWave,
+//            largeMelee, hardDiffsmallSize, sleepWave,
+//            hardDiffmediumSize, hardDiffLargeSize, sleepWave,
+//            exlargeMelee, hardDiffExLargeSize
     };
 
     int currentWaveIndex;
@@ -282,6 +284,7 @@ public class MetaGame {
         }
         if (gameState == GameState.LOSE) {
             if (!isPlayAgainSelected) {
+                currentWaveIndex = -1;
                 game.nextState = GameState.PLAYAGAIN;
                 game.darkScreenTimer = game.DARK_SCREEN_TIMER;
                 game.fadeDirectionOut = true;
@@ -345,6 +348,12 @@ public class MetaGame {
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
         }
+        if (gameState == GameState.WIN) {
+            currentWaveIndex = -1;
+            game.nextState = GameState.EXIT;
+            game.darkScreenTimer = game.DARK_SCREEN_TIMER;
+            game.fadeDirectionOut = true;
+        }
     }
 
     public void resetDay() {
@@ -366,7 +375,8 @@ public class MetaGame {
         SHOP,
         NIGHT,
         ADVICE,
-        PROGRESS
+        PROGRESS,
+        EXIT
     }
 
     public void dispose() {

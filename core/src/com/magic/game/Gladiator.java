@@ -408,6 +408,9 @@ public class Gladiator extends ApplicationAdapter {
                 if (nextState == MetaGame.GameState.NIGHT) {
                     cleanGameArea();
                 }
+                if (nextState == MetaGame.GameState.EXIT) {
+                    Gdx.app.exit();
+                }
                 metaGame.setState(nextState);
                 nextState = null;
             }
