@@ -58,11 +58,6 @@ public class PickupEntity implements Entity {
         return false;
     }
 
-    @Override
-    public Sprite getSprite() {
-        return sprite;
-    }
-
     public PlayerState getState() {
         return state;
     }
@@ -70,6 +65,11 @@ public class PickupEntity implements Entity {
     @Override
     public void dispose() {
 
+    }
+
+    @Override
+    public void setColor(Color color) {
+        sprite.setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
     }
 
     @Override
@@ -86,7 +86,7 @@ public class PickupEntity implements Entity {
 
     @Override
     public void draw(SpriteBatch batch) {
-//        batch.draw(texture, getPos().x, getPos().y);
+        sprite.draw(batch);
     }
 
     @Override

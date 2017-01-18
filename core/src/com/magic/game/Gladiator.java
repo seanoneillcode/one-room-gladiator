@@ -141,7 +141,7 @@ public class Gladiator extends ApplicationAdapter {
         ais = new ArrayList<Ai>();
         pickups = new ArrayList<Entity>();
         player = PlayerEntity(new Vector2(300, 120), (player == null ? playerParams : player.params), javafx.scene.paint.Color.color(1.0, 0.0, 0.0));
-        player.getSprite().setColor(1.0f, 0.1f, 0.1f, 1.0f);
+        player.setColor(javafx.scene.paint.Color.hsb(0, 1.0f, 1.0f));
         ents.add(player);
         SoundPlayer.setPlayer(player);
         elapsedTime = 0;
@@ -175,7 +175,7 @@ public class Gladiator extends ApplicationAdapter {
 
         javafx.scene.paint.Color color = javafx.scene.paint.Color.hsb(hue, 1.0f, 1.0f);
         PlayerEntityImpl ent = PlayerEntity(getRandomPosition(), params, color);
-        ent.getSprite().setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
+        ent.setColor(color);
         ents.add(ent);
         ais.add(new Ai(ent));
     }
@@ -309,10 +309,7 @@ public class Gladiator extends ApplicationAdapter {
             }
         });
 		for (Entity ent : ents) {
-			ent.getSprite().draw(batch);
-            if (ent.getHealth() > 0) {
-                ent.draw(batch);
-            }
+            ent.draw(batch);
             if (showDebug && ent.getBody() != null) {
                 Rectangle entHit = getEntityHitBox(ent);
                 Color color = Color.BLUE;

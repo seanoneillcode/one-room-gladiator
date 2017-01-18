@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.magic.game.Gladiator.BOX_TO_WORLD;
+import static com.magic.game.Gladiator.ENTITY_RADIUS;
 import static com.magic.game.Gladiator.MAX_ENTITY_SPEED;
 
 import javafx.scene.paint.Color;
@@ -24,7 +25,7 @@ public class PlayerEntityImpl implements Entity {
 
     public static final float ATTACK_COOLDOWN = 0.6f;
 
-    Sprite sprite;
+    Sprite sprite, bloodSprite;
     Body body;
     int health;
     float damageCooldown = 0.8f;
@@ -33,19 +34,20 @@ public class PlayerEntityImpl implements Entity {
     private PlayerState state;
     boolean isRight, isRunning;
     AnimState animState;
-    Animation idle, run, slow, hurt, die, att, victory;
+    Animation idle, run, slow, hurt, die, att, victory, blood;
     int imageWidth = 43;
     int imageHeight = 44;
     float slowCooldown = 0.14f;
     float slowTimer;
-    float dieTimer, attTimer;
-    Vector2 lastPos;
+    float dieTimer, attTimer, bloodTimer;
+    Vector2 lastPos, bloodPos;
     Texture shadow;
     Sound thumpSound;
     boolean isVictory;
     int team;
     Color color;
     float attackCooldown = 0;
+    TextureRegion bloodRegion;
 
     Map<String, Float> params;
 
@@ -54,6 +56,9 @@ public class PlayerEntityImpl implements Entity {
         this.sprite = new Sprite();
         sprite.setSize(imageWidth, imageHeight);
         sprite.setOrigin(imageWidth / 2, imageHeight);
+        bloodSprite = new Sprite();
+        bloodSprite.setSize(imageWidth, imageHeight);
+        bloodSprite.setOrigin(imageWidth / 2, imageHeight);
 
         shadow = new Texture("player-shadow.png");
         TextureRegion[][] idleRegions = TextureRegion.split(new Texture("player-idle.png"), imageWidth, imageHeight);
@@ -70,6 +75,10 @@ public class PlayerEntityImpl implements Entity {
         die = new Animation(1/12f, dieRegions[0]);
         TextureRegion[][] attRegions = TextureRegion.split(new Texture("player-attack.png"), imageWidth, imageHeight);
         att = new Animation(1/30f, attRegions[0]);
+        TextureRegion[][] booldRegions = TextureRegion.split(new Texture("player-blood.png"), imageWidth, imageHeight);
+        blood = new Animation(0.05f, booldRegions[0]);
+        bloodRegion = blood.getKeyFrame(0);
+
         setAnimation(0);
         this.color = color;
         thumpSound = Gdx.audio.newSound(Gdx.files.internal("thump-sound-sml.ogg"));
@@ -83,6 +92,8 @@ public class PlayerEntityImpl implements Entity {
         isVictory = false;
         dieTimer = 0;
         attTimer = 0;
+        bloodTimer = 0;
+        bloodPos = pos.cpy();
         lastPos = pos.cpy();
         body.setUserData(this);
         this.params = new HashMap<String, Float>(params);
@@ -124,6 +135,8 @@ public class PlayerEntityImpl implements Entity {
         if (animState == AnimState.HURT) {
             choice = hurt;
             loop = false;
+            bloodTimer = bloodTimer + Gdx.graphics.getDeltaTime();
+            bloodRegion = blood.getKeyFrame(bloodTimer);
         }
         if (animState == AnimState.VICTORY) {
             choice = victory;
@@ -146,6 +159,12 @@ public class PlayerEntityImpl implements Entity {
         }
         if (!isRight && !region.isFlipX()) {
             region.flip(true, false);
+        }
+        if (isRight && bloodRegion.isFlipX()) {
+            bloodRegion.flip(true, false);
+        }
+        if (!isRight && !bloodRegion.isFlipX()) {
+            bloodRegion.flip(true, false);
         }
         sprite.setRegion(region);
     }
@@ -231,7 +250,7 @@ public class PlayerEntityImpl implements Entity {
         int maxHealth = params.get("maxHealth").intValue();
         float value = MathUtils.clamp(((float) health / (float) maxHealth) * 1.2f, 0f, 1.0f);
         Color midColor = color.deriveColor(0, 1.0f, value, 1.0f);
-        getSprite().setColor((float)midColor.getRed(), (float)midColor.getGreen(), (float)midColor.getBlue(), 1.0f);
+        sprite.setColor((float)midColor.getRed(), (float)midColor.getGreen(), (float)midColor.getBlue(), 1.0f);
     }
 
     @Override
@@ -254,14 +273,12 @@ public class PlayerEntityImpl implements Entity {
             thumpSound.play(SoundPlayer.getSfxVolume(this.getPos()), MathUtils.random(0.5f, 2.0f), 0);
             health = health - amount;
             damageTimer = damageCooldown;
+            bloodTimer = 0;
+            bloodPos = new Vector2(sprite.getX(), sprite.getY());
+            bloodPos.x = bloodPos.x + ( isRight ? -(ENTITY_RADIUS * 2) : (ENTITY_RADIUS * 2));
             return true;
         }
         return false;
-    }
-
-    @Override
-    public Sprite getSprite() {
-        return sprite;
     }
 
     public Vector2 getPos() {
@@ -281,8 +298,23 @@ public class PlayerEntityImpl implements Entity {
     }
 
     @Override
+    public void setColor(Color color) {
+        sprite.setColor((float)color.getRed(), (float)color.getGreen(), (float)color.getBlue(), 1.0f);
+        Color newColor = Color.hsb(color.getHue() + 180, color.getSaturation(), color.getBrightness(), 1.0f);
+        bloodSprite.setColor((float)newColor.getRed(), (float)newColor.getGreen(), (float)newColor.getBlue(), 1.0f);
+    }
+
+    @Override
     public void draw(SpriteBatch batch) {
-        batch.draw(this.shadow, this.sprite.getX(), this.sprite.getY());
+        if (health > 0) {
+            batch.draw(this.shadow, this.sprite.getX(), this.sprite.getY());
+        }
+        if (animState == AnimState.HURT) {
+            bloodSprite.setRegion(bloodRegion);
+            bloodSprite.setPosition(bloodPos.x, bloodPos.y);
+            bloodSprite.draw(batch);
+        }
+        sprite.draw(batch);
     }
 
     @Override

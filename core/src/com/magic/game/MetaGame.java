@@ -53,13 +53,11 @@ public class MetaGame {
     int[] everyone = new int [] {200};
 
     int[][] levelWaves = new int[][] {
-            mediumDiffsmallSize,
-            mediumMelee
-//            mediumMelee, mediumDiffsmallSize, sleepWave,
-//            mediumDiffMediumSize, mediumDiffLargeSize, sleepWave,
-//            largeMelee, hardDiffsmallSize, sleepWave,
-//            hardDiffmediumSize, hardDiffLargeSize, sleepWave,
-//            exlargeMelee, hardDiffExLargeSize
+            mediumMelee, mediumDiffsmallSize, sleepWave,
+            mediumDiffMediumSize, mediumDiffLargeSize, sleepWave,
+            largeMelee, hardDiffsmallSize, sleepWave,
+            hardDiffmediumSize, hardDiffLargeSize, sleepWave,
+            exlargeMelee, hardDiffExLargeSize
     };
 
     int currentWaveIndex;
