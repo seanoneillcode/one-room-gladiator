@@ -300,7 +300,11 @@ public class Gladiator extends ApplicationAdapter {
             @Override
             public int compare(Entity o1, Entity o2) {
                 if (o1.getState() == PlayerState.DEAD) {
-                    return -1;
+                    if (o2.getState() == PlayerState.DEAD) {
+                        return 0;
+                    } else {
+                        return -1;
+                    }
                 }
                 if (o2.getState() == PlayerState.DEAD) {
                     return 1;
@@ -584,6 +588,7 @@ public class Gladiator extends ApplicationAdapter {
                 metaGame.resetDay();
                 nextState = MetaGame.GameState.PROGRESS;
                 darkSlowMusic.stop();
+                fastDanceMusic.loop(SoundPlayer.getMusicVolume());
             }
             if (playerPos.dst2(talkPos) < 900) {
                 buttonTimer = buttonCooldown;

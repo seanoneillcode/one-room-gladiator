@@ -270,6 +270,7 @@ public class MetaGame {
             return;
         }
         if (gameState == GameState.CONTROLS) {
+            game.darkSlowMusic.stop();
             game.fastDanceMusic.loop(SoundPlayer.getMusicVolume());
             gameState = GameState.IDEA;
             return;
@@ -324,7 +325,7 @@ public class MetaGame {
             game.nextState = GameState.PROGRESS;
             game.darkScreenTimer = game.DARK_SCREEN_TIMER;
             game.fadeDirectionOut = true;
-            game.fastDanceMusic.stop();
+
             return;
         }
         if (gameState == GameState.ADVICE) {
@@ -335,9 +336,9 @@ public class MetaGame {
             if (currentWaveIndex < (levelWaves.length - 1)) {
                 if (levelWaves[currentWaveIndex + 1].length == 0) {
                     game.nextState = GameState.NIGHT;
+                    game.fastDanceMusic.stop();
                     game.darkSlowMusic.loop(SoundPlayer.getMusicVolume());
                 } else {
-                    game.fastDanceMusic.loop(SoundPlayer.getMusicVolume());
                     game.nextState = GameState.PLAYAGAIN;
                 }
             } else {
